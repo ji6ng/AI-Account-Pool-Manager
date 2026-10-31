@@ -1,0 +1,43 @@
+/* Small quota summaries and one model-selection workflow per client Key. */
+.quota-compact{min-width:194px;max-width:260px;font-variant-numeric:tabular-nums}
+.quota-meter{display:grid;grid-template-columns:56px minmax(42px,1fr) 43px;align-items:center;gap:8px;min-height:20px;font-size:10.5px;line-height:1.5}
+.quota-label{color:var(--muted);white-space:nowrap}
+.quota-meter b{font:600 10.5px var(--mono);text-align:right;color:var(--text)}
+.quota-meter .qbar{min-width:0;height:5px;background:var(--line)}
+.quota-window+.quota-window{margin-top:9px}
+.quota-reset{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:2px;font-size:9px;color:var(--faint)}
+.quota-reset time{font:10px var(--mono);color:var(--muted);white-space:nowrap}
+.quota-details{margin-top:2px}
+.quota-details summary{width:max-content;margin-left:auto;font-size:9px;color:var(--faint);cursor:pointer;list-style:none;line-height:1.8}
+.quota-details summary::-webkit-details-marker{display:none}
+.quota-details summary:after{content:'⌄';display:inline-block;margin-left:5px;transition:transform .15s}
+.quota-details[open] summary:after{transform:rotate(180deg)}
+.quota-details summary:hover{color:var(--text)}
+.quota-detail-body{padding:10px;margin-top:5px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-height:260px;overflow:auto;font-size:10px;line-height:1.8}
+.quota-detail-body>div:not(.quota-model-details){display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 0;border-bottom:1px solid var(--line)}
+.quota-detail-body time{grid-column:1/-1;color:var(--muted);font-size:9px}
+.quota-detail-body p{font-size:9px;color:var(--muted);margin:7px 0 0}
+.quota-model-details{padding-top:8px}
+.quota-model-details>div{display:flex;justify-content:space-between;gap:8px;font-size:9px;padding:2px 0;overflow-wrap:anywhere}
+.quota-model-details b{white-space:nowrap}
+.key-scope-badges{display:flex;flex-wrap:wrap;gap:4px;min-width:150px;max-width:350px;margin-bottom:4px}
+.key-scope-status{padding:8px 0 10px;font-variant-numeric:tabular-nums}
+.key-model-groups{max-height:43vh;overflow:auto;overscroll-behavior:contain;padding:1px 4px 1px 1px}
+.key-scope-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0 12px;position:sticky;top:0;z-index:1;background:var(--card)}
+.key-scope-tools>label{display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:12px;cursor:pointer}
+.key-scope-tools .tiny{font-size:10px}
+.key-model-group{border:1px solid var(--line);border-radius:9px;background:var(--card);margin-bottom:8px;overflow:hidden}
+.key-group-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 11px;background:var(--surface)}
+.key-group-head>label{display:flex;align-items:center;gap:8px;min-width:0;cursor:pointer;font-size:12px}
+.key-group-head strong{font-weight:550}
+.key-group-head input,.key-scope-tools input,.key-model-list input{accent-color:var(--ok);width:14px;height:14px;flex-shrink:0;margin:0}
+.key-group-head input:disabled,.key-model-list input:disabled{cursor:not-allowed}
+.key-group-head .badge{font:9px var(--mono);padding:1px 5px}
+.key-group-head .btn{font-size:10px;min-height:25px;padding:4px 7px}
+.key-model-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 15px;padding:11px}
+.key-model-list>label{display:flex;align-items:flex-start;gap:8px;font-size:11px;cursor:pointer;overflow-wrap:anywhere}
+.key-model-list input{margin-top:3px}
+.key-model-list small{display:block;font-size:9px;color:var(--faint)}
+#dlg-key-connect .console{font-size:10px;line-height:1.9;max-height:290px}
+#dlg-key-connect #key-connect-scope{font-size:11px;margin-bottom:18px}
+@media(max-width:720px){.quota-compact{min-width:180px}.quota-meter{grid-template-columns:50px minmax(35px,1fr) 42px;gap:6px}.key-model-list{grid-template-columns:1fr}.key-model-groups{max-height:48vh}.key-scope-tools>label{font-size:11px}.key-scope-tools .tiny{width:100%;margin-left:21px}.key-group-head>label{font-size:11px}.key-model-list>label{font-size:10px}}
