@@ -1,0 +1,889 @@
+{
+  "models": {
+    "models": [
+      "gpt-6.1-terra",
+      "gpt-5.6-sol",
+      "gpt-image-2.5-flare",
+      "gemini-claude-opus-4-6",
+      "plus-gpt-6.1-sol",
+      "kakou/gpt-6.1-sol",
+      "Kakou/claude-opus-5",
+      "gemini-3.8-flash-high",
+      "plus-gpt-6-astra",
+      "kakou/gpt-6-astra",
+      "Kakou/claude-opus-5-5",
+      "Kakou/claude-sonnet-5",
+      "gpt-6-luna",
+      "gpt-image-2.5",
+      "gemini-claude-sonnet-4-6",
+      "plus-gpt-6-luna",
+      "gemini-3.5-flash-lite",
+      "codex-auto-review",
+      "gpt-image-1.5",
+      "pro-gpt-6.1-sol",
+      "kakou/deepseek-v4.1-flash",
+      "gemini-3.1-flash-lite",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-image-2.5-sunburst",
+      "gpt-image-2",
+      "sudo/claude-fable-5",
+      "sudo/claude-sonnet-5-5",
+      "gemini-3-flash",
+      "plus-gpt-6-sol",
+      "pro-gpt-6-sol",
+      "gemini-gpt-oss-120b-medium",
+      "pro-gpt-6-astra",
+      "Kakou/claude-sonnet-5-5",
+      "gemini-3.1-flash-image",
+      "sudo/claude-opus-5-5"
+    ],
+    "exposed": [
+      "plus-gpt-6.1-sol",
+      "plus-gpt-6-astra",
+      "plus-gpt-6-sol",
+      "plus-gpt-6-luna",
+      "pro-gpt-6.1-sol",
+      "pro-gpt-6-astra",
+      "pro-gpt-6-sol",
+      "gemini-3-pro-preview",
+      "gemini-3.1-flash-image",
+      "gemini-3.8-flash-high",
+      "gemini-claude-sonnet-4-6",
+      "gemini-claude-opus-4-6",
+      "gemini-gpt-oss-120b-medium",
+      "kakou/gpt-6.1-sol",
+      "kakou/gpt-6-astra",
+      "Kakou/claude-sonnet-5-5",
+      "Kakou/claude-opus-5-5",
+      "Kakou/claude-sonnet-5",
+      "Kakou/claude-opus-5",
+      "sudo/claude-fable-5",
+      "sudo/claude-opus-5-5",
+      "sudo/claude-sonnet-5-5",
+      "kakou/deepseek-v4.1-flash"
+    ],
+    "pools": {
+      "plus": {
+        "label": "Plus",
+        "enabled": true,
+        "models": [
+          {
+            "alias": "plus-gpt-6.1-sol",
+            "display": "Plus · GPT 6.1 Sol",
+            "name": "gpt-6.1-sol"
+          },
+          {
+            "alias": "plus-gpt-6-astra",
+            "display": "Plus · GPT 6 Astra",
+            "name": "gpt-6-astra"
+          },
+          {
+            "alias": "plus-gpt-6-sol",
+            "display": "Plus · GPT 6 Sol",
+            "name": "gpt-6-sol"
+          },
+          {
+            "alias": "plus-gpt-6-luna",
+            "display": "Plus · GPT 6 Luna",
+            "name": "gpt-6-luna"
+          }
+        ]
+      },
+      "pro": {
+        "label": "Pro",
+        "enabled": true,
+        "models": [
+          {
+            "alias": "pro-gpt-6.1-sol",
+            "display": "Pro · GPT 6.1 Sol",
+            "name": "gpt-6.1-sol"
+          },
+          {
+            "alias": "pro-gpt-6-astra",
+            "display": "Pro · GPT 6 Astra",
+            "name": "gpt-6-astra"
+          },
+          {
+            "alias": "pro-gpt-6-sol",
+            "display": "Pro · GPT 6 Sol",
+            "name": "gpt-6-sol"
+          }
+        ]
+      },
+      "gemini": {
+        "label": "Gemini",
+        "enabled": true,
+        "models": [
+          {
+            "alias": "gemini-3-pro-preview",
+            "display": "Gemini · 3 Pro",
+            "name": "gemini-3.8-flash-tiered"
+          },
+          {
+            "alias": "gemini-3.1-flash-image",
+            "display": "Gemini · 3.1 Flash Image",
+            "name": "gemini-3.1-flash-image"
+          },
+          {
+            "alias": "gemini-3.8-flash-high",
+            "display": "Gemini · 3.8 Flash High",
+            "name": "gemini-3.8-flash-high"
+          },
+          {
+            "alias": "gemini-claude-sonnet-4-6",
+            "name": "claude-sonnet-4-6",
+            "display": "Google · Claude Sonnet 4.6"
+          },
+          {
+            "alias": "gemini-claude-opus-4-6",
+            "name": "claude-opus-4-6-thinking",
+            "display": "Google · Claude Opus 4.6 Thinking"
+          },
+          {
+            "alias": "gemini-gpt-oss-120b-medium",
+            "name": "gpt-oss-120b-medium",
+            "display": "Google · GPT-OSS 120B Medium"
+          }
+        ]
+      }
+    },
+    "suggest": {
+      "plus": [
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol",
+        "gpt-6.1-sol"
+      ],
+      "pro": [
+        "gpt-6-astra",
+        "gpt-6-sol",
+        "gpt-6.1-sol"
+      ],
+      "gemini": [
+        "claude-opus-4-6-thinking",
+        "claude-sonnet-4-6",
+        "gemini-3-flash",
+        "gemini-3.1-flash-image",
+        "gemini-3.1-flash-lite",
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash-high",
+        "gemini-3.8-flash-tiered",
+        "gpt-oss-120b-medium"
+      ]
+    }
+  },
+  "providers": [
+    {
+      "id": "kakou",
+      "label": "Kakou",
+      "prefix": "kakou",
+      "enabled": true,
+      "models": [
+        {
+          "alias": "gpt-6.1-sol",
+          "display": "Kakou · GPT 6.1 Sol",
+          "name": "gpt-6.1-sol"
+        },
+        {
+          "alias": "gpt-6-astra",
+          "display": "Kakou · GPT 6 Astra",
+          "name": "gpt-6-astra"
+        }
+      ],
+      "base_url": "https://relay.example.invalid",
+      "api_key": "qk-DEMO"
+    },
+    {
+      "id": "kakou-2",
+      "label": "Kakou_claude",
+      "prefix": "Kakou",
+      "enabled": true,
+      "models": [
+        {
+          "alias": "claude-sonnet-5-5",
+          "display": "Kakou · Claude Sonnet 5.5",
+          "name": "claude-sonnet-5-5"
+        },
+        {
+          "alias": "claude-opus-5-5",
+          "display": "Kakou · Claude Opus 5.5",
+          "name": "claude-opus-5-5"
+        },
+        {
+          "alias": "claude-sonnet-5",
+          "display": "Kakou · Claude Sonnet 5",
+          "name": "claude-sonnet-5"
+        },
+        {
+          "alias": "claude-opus-5",
+          "display": "Kakou · Claude Opus 5",
+          "name": "claude-opus-5"
+        }
+      ],
+      "base_url": "https://relay.example.invalid",
+      "api_key": "qk-DEMO"
+    },
+    {
+      "id": "sudo",
+      "label": "SudoCode",
+      "prefix": "sudo",
+      "enabled": true,
+      "models": [
+        {
+          "alias": "claude-fable-5",
+          "display": "Sudo · claude-fable-5",
+          "name": "claude-fable-5"
+        },
+        {
+          "alias": "claude-opus-5-5",
+          "display": "Sudo · claude-opus-5-5",
+          "name": "claude-opus-5-5"
+        },
+        {
+          "alias": "claude-sonnet-5-5",
+          "display": "Sudo · claude-sonnet-5-5",
+          "name": "claude-sonnet-5-5"
+        }
+      ],
+      "base_url": "https://relay.example.invalid",
+      "api_key": "qk-DEMO"
+    },
+    {
+      "id": "kakou-3",
+      "label": "Kakou_deepseek",
+      "prefix": "kakou",
+      "enabled": true,
+      "models": [
+        {
+          "alias": "deepseek-v4.1-flash",
+          "display": "Kakou · deepseek-v4.1-flash",
+          "name": "deepseek-v4.1-flash"
+        }
+      ],
+      "base_url": "https://relay.example.invalid",
+      "api_key": "qk-DEMO"
+    }
+  ],
+  "accounts": [
+    {
+      "file": "test-account-0.json",
+      "email": "account1@example.invalid",
+      "provider": "gemini",
+      "pool": "gemini",
+      "pool_label": "Gemini",
+      "plan": "",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "provider": "gemini",
+        "plan": "Google AI Pro",
+        "groups": [
+          {
+            "name": "Gemini",
+            "raw_name": "Gemini models",
+            "desc": "上游没有下发 Gemini 组的周限额（该套餐下 Gemini 模型通常不受周上限约束）",
+            "buckets": [
+              {
+                "window": "5h",
+                "label": "5 小时",
+                "left": 99.8,
+                "used": 0.2,
+                "reset_at": 1793350031,
+                "reset_after": 14571
+              }
+            ]
+          },
+          {
+            "name": "Claude / GPT",
+            "raw_name": "Claude and GPT models",
+            "desc": "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+            "buckets": [
+              {
+                "window": "5h",
+                "label": "5 小时",
+                "left": 99.8,
+                "used": 0.2,
+                "reset_at": 1793350031,
+                "reset_after": 14571
+              },
+              {
+                "window": "weekly",
+                "label": "周",
+                "left": 99.9,
+                "used": 0.1,
+                "reset_at": 1793715267,
+                "reset_after": 379807
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "claude-opus-4-6-thinking",
+            "left": 99.8,
+            "reset_at": 1793350031,
+            "reset_after": 14571
+          },
+          {
+            "model": "claude-sonnet-4-6",
+            "left": 99.8,
+            "reset_at": 1793350031,
+            "reset_after": 14571
+          },
+          {
+            "model": "gpt-oss-120b-medium",
+            "left": 99.8,
+            "reset_at": 1793350031,
+            "reset_after": 14571
+          },
+          {
+            "model": "gemini-2.5-flash",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-2.5-flash-thinking",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-2.5-pro",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-3-flash",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-3.1-flash-image",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-3.1-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-3.5-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          },
+          {
+            "model": "gemini-3.8-flash-tiered",
+            "left": 100.0,
+            "reset_at": 1793349167,
+            "reset_after": 13707
+          }
+        ],
+        "primary": {
+          "used": 0.2,
+          "left": 99.8,
+          "window_seconds": 18000,
+          "label": "5 小时",
+          "reset_after": 14571,
+          "reset_at": 1793350031
+        },
+        "secondary": {
+          "used": 0.1,
+          "left": 99.9,
+          "window_seconds": 604800,
+          "label": "周",
+          "reset_after": 379807,
+          "reset_at": 1793715267
+        },
+        "limit_reached": false,
+        "fetched_at": 1793335460,
+        "cached": false
+      }
+    },
+    {
+      "file": "test-account-1.json",
+      "email": "account2@example.invalid",
+      "provider": "gemini",
+      "pool": "gemini",
+      "pool_label": "Gemini",
+      "plan": "",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "provider": "gemini",
+        "plan": "Google AI Pro",
+        "groups": [
+          {
+            "name": "Gemini",
+            "raw_name": "Gemini models",
+            "desc": "上游没有下发 Gemini 组的周限额（该套餐下 Gemini 模型通常不受周上限约束）",
+            "buckets": [
+              {
+                "window": "5h",
+                "label": "5 小时",
+                "left": 99.8,
+                "used": 0.2,
+                "reset_at": 1793350241,
+                "reset_after": 14781
+              }
+            ]
+          },
+          {
+            "name": "Claude / GPT",
+            "raw_name": "Claude and GPT models",
+            "desc": "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+            "buckets": [
+              {
+                "window": "5h",
+                "label": "5 小时",
+                "left": 99.8,
+                "used": 0.2,
+                "reset_at": 1793350241,
+                "reset_after": 14781
+              },
+              {
+                "window": "weekly",
+                "label": "周",
+                "left": 97.3,
+                "used": 2.7,
+                "reset_at": 1793714668,
+                "reset_after": 379208
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "claude-opus-4-6-thinking",
+            "left": 99.8,
+            "reset_at": 1793350241,
+            "reset_after": 14781
+          },
+          {
+            "model": "claude-sonnet-4-6",
+            "left": 99.8,
+            "reset_at": 1793350241,
+            "reset_after": 14781
+          },
+          {
+            "model": "gpt-oss-120b-medium",
+            "left": 99.8,
+            "reset_at": 1793350241,
+            "reset_after": 14781
+          },
+          {
+            "model": "gemini-2.5-flash",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-2.5-flash-thinking",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-2.5-pro",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-3-flash",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-3.1-flash-image",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-3.1-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-3.5-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          },
+          {
+            "model": "gemini-3.8-flash-tiered",
+            "left": 100.0,
+            "reset_at": 1793349173,
+            "reset_after": 13713
+          }
+        ],
+        "primary": {
+          "used": 0.2,
+          "left": 99.8,
+          "window_seconds": 18000,
+          "label": "5 小时",
+          "reset_after": 14781,
+          "reset_at": 1793350241
+        },
+        "secondary": {
+          "used": 2.7,
+          "left": 97.3,
+          "window_seconds": 604800,
+          "label": "周",
+          "reset_after": 379208,
+          "reset_at": 1793714668
+        },
+        "limit_reached": false,
+        "fetched_at": 1793335460,
+        "cached": false
+      }
+    },
+    {
+      "file": "test-account-2.json",
+      "email": "account3@example.invalid",
+      "provider": "gemini",
+      "pool": "gemini",
+      "pool_label": "Gemini",
+      "plan": "",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "provider": "gemini",
+        "plan": "Google AI Pro",
+        "groups": [
+          {
+            "name": "Gemini",
+            "raw_name": "Gemini models",
+            "desc": "上游没有下发 Gemini 组的周限额（该套餐下 Gemini 模型通常不受周上限约束）",
+            "buckets": [
+              {
+                "window": "5h",
+                "label": "5 小时",
+                "left": 100.0,
+                "used": 0.0,
+                "reset_at": 1793353462,
+                "reset_after": 18002
+              }
+            ]
+          },
+          {
+            "name": "Claude / GPT",
+            "raw_name": "Claude and GPT models",
+            "desc": "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+            "buckets": [
+              {
+                "window": "5h",
+                "label": "5 小时",
+                "left": 100.0,
+                "used": 0.0,
+                "reset_at": 1793353462,
+                "reset_after": 18002
+              },
+              {
+                "window": "weekly",
+                "label": "周",
+                "left": 100.0,
+                "used": 0.0,
+                "reset_at": 1793940262,
+                "reset_after": 604802
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "claude-opus-4-6-thinking",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "claude-sonnet-4-6",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-2.5-flash",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-2.5-flash-thinking",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-2.5-pro",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-3-flash",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-3.1-flash-image",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-3.1-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-3.5-flash-lite",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gemini-3.8-flash-tiered",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          },
+          {
+            "model": "gpt-oss-120b-medium",
+            "left": 100.0,
+            "reset_at": 1793353462,
+            "reset_after": 18002
+          }
+        ],
+        "primary": {
+          "used": 0.0,
+          "left": 100.0,
+          "window_seconds": 18000,
+          "label": "5 小时",
+          "reset_after": 18002,
+          "reset_at": 1793353462
+        },
+        "secondary": {
+          "used": 0.0,
+          "left": 100.0,
+          "window_seconds": 604800,
+          "label": "周",
+          "reset_after": 604802,
+          "reset_at": 1793940262
+        },
+        "limit_reached": false,
+        "fetched_at": 1793335460,
+        "cached": false
+      }
+    },
+    {
+      "file": "test-account-3.json",
+      "email": "account4@example.invalid",
+      "provider": "codex",
+      "pool": "plus",
+      "pool_label": "Plus",
+      "plan": "plus",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "plan": "plus",
+        "limit_reached": false,
+        "primary": {
+          "used": 32.0,
+          "left": 68.0,
+          "window_seconds": 18000,
+          "label": "5 小时",
+          "reset_after": 11724,
+          "reset_at": 1793347190
+        },
+        "secondary": {
+          "used": 62.0,
+          "left": 38.0,
+          "window_seconds": 604800,
+          "label": "7 天",
+          "reset_after": 439021,
+          "reset_at": 1793774487
+        },
+        "reset": {
+          "available": 0,
+          "applicable": 0
+        },
+        "fetched_at": 1793335466,
+        "cached": false
+      }
+    },
+    {
+      "file": "test-account-4.json",
+      "email": "account5@example.invalid",
+      "provider": "codex",
+      "pool": "plus",
+      "pool_label": "Plus",
+      "plan": "plus",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "plan": "plus",
+        "limit_reached": false,
+        "primary": {
+          "used": 33.0,
+          "left": 67.0,
+          "window_seconds": 18000,
+          "label": "5 小时",
+          "reset_after": 11832,
+          "reset_at": 1793347299
+        },
+        "secondary": {
+          "used": 32.0,
+          "left": 68.0,
+          "window_seconds": 604800,
+          "label": "7 天",
+          "reset_after": 439125,
+          "reset_at": 1793774591
+        },
+        "reset": {
+          "available": 0,
+          "applicable": 0
+        },
+        "fetched_at": 1793335467,
+        "cached": false
+      }
+    },
+    {
+      "file": "test-account-5.json",
+      "email": "account6@example.invalid",
+      "provider": "codex",
+      "pool": "plus",
+      "pool_label": "Plus",
+      "plan": "free",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "plan": "free",
+        "limit_reached": false,
+        "primary": {
+          "used": 0.0,
+          "left": 100.0,
+          "window_seconds": 2592000,
+          "label": "30 天",
+          "reset_after": 2592000,
+          "reset_at": 1795927467
+        },
+        "secondary": null,
+        "reset": {
+          "available": 1,
+          "applicable": 0
+        },
+        "fetched_at": 1793335466,
+        "cached": false
+      }
+    },
+    {
+      "file": "test-account-6.json",
+      "email": "account7@example.invalid",
+      "provider": "codex",
+      "pool": "pro",
+      "pool_label": "Pro",
+      "plan": "pro",
+      "disabled": false,
+      "sub": {},
+      "quota": {
+        "ok": true,
+        "plan": "pro",
+        "limit_reached": false,
+        "primary": {
+          "used": 1.0,
+          "left": 99.0,
+          "window_seconds": 604800,
+          "label": "7 天",
+          "reset_after": 441985,
+          "reset_at": 1793777451
+        },
+        "secondary": null,
+        "reset": {
+          "available": 1,
+          "applicable": 0
+        },
+        "fetched_at": 1793335466,
+        "cached": false
+      }
+    }
+  ],
+  "overview": {
+    "version": "1.2.6",
+    "pool": {
+      "running": true,
+      "pid": 64516,
+      "port": 8321,
+      "uptime": 2522,
+      "reachable": true,
+      "models": 36,
+      "error": ""
+    },
+    "ports": {
+      "ui": 8322,
+      "pool": 8321
+    },
+    "accounts": {
+      "total": 7,
+      "active": 7,
+      "by_pool": {
+        "Gemini": 3,
+        "Plus": 3,
+        "Pro": 1
+      }
+    },
+    "today": 156,
+    "stats": {
+      "ok": 100,
+      "fail": 2,
+      "total": 102,
+      "rate": 98,
+      "days": [],
+      "today": {
+        "ok": 5,
+        "fail": 0,
+        "total": 5
+      },
+      "accounts": []
+    },
+    "keys": 3,
+    "exposed": 23
+  }
+}

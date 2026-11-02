@@ -1,33 +1,60 @@
 # AI 号池管理器
 
-用于管理多个 AI 账号、配置第三方提供商，并向客户端提供统一接入地址的本地工具。
+在 Windows 上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.17**。
 
-**当前仓库提供 Windows 程序发行包、前端资源和使用文档，尚未包含完整后端源码及构建脚本。**
+本仓库包含完整 Python 后端、网页前端、构建脚本及离线测试。Windows 用户可直接下载绿色包，无需安装 Python。
 
-## 下载与启动
+## 下载与使用
 
-1. 点击本页 **Code → Download ZIP**，下载后完整解压。
-2. 双击 `AI号池管理器.exe`，浏览器会自动打开本地管理界面，默认地址为 `http://127.0.0.1:8320`。
-3. 按界面提示添加自己的账号，再将客户端页提供的 Base URL 和 Key 填入客户端。
+1. 从 [Releases](https://github.com/ji6ng/AI-Account-Pool-Manager/releases) 下载 windows-x64-nocredentials.zip，完整解压。
+2. 双击 AI号池管理器.exe，保留旁边的 _internal 文件夹。默认管理地址为 http://127.0.0.1:8320，端口占用时自动调整。
+3. 添加自己的账号或提供商，在客户端密钥页选择允许调用的模型并复制接入配置。实际地址以页面为准。
 
-必须保留 EXE 旁边的 `_internal` 文件夹；仅下载 EXE 无法运行。程序包包含 Python 运行库，无需另行安装 Python。
-
-端口被占用时会自动选择其他可用端口。关闭浏览器不会退出后台服务；请在「设置 → 退出程序」中关闭。
+关闭浏览器后服务仍会运行，在系统设置中退出。升级时先退出程序，备份并保留已有 data/，仅替换程序文件。
 
 ## 功能
 
-- 管理多个账号及账号池，查看额度、订阅信息和调用记录。
-- 配置第三方模型提供商及客户端接入。
-- 提供模型测试和管理界面。
+- 管理 Plus、Pro、Gemini 账号及提供商，查看额度、重置倒计时和请求记录。
+- 支持 OpenAI Responses / Chat Completions、Anthropic Messages 与 Gemini 接口，可用模型取决于上游账号和授权。
+- 客户端 Key 按模型分组授权，同时控制调用权限和目录，提供 Codex 与 Claude 接入模板。
+- Plus 支持账号顺序，优先使用有 5 小时窗口的账号，确认耗尽后进入后备组；恢复后新请求返回优先组。
+- Plus 全部确认限额后，可按模型使用指定代理商模型；Key 必须同时授权原模型和备用模型。
+- 普通网络错误、5xx 和未知额度不会触发账号优先级切换。
 
-具体支持范围和操作步骤请参阅 [使用说明](使用说明.md) 与 [先看这里](先看这里.txt)。
+## 开发与构建
 
-## 账号与配置
+建议 Windows x64、Python 3.13：
 
-此发行包不包含预置账号凭据及个人配置。首次使用时请自行添加账号并配置网络。
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+# 按 vendor/README.md 准备 vendor/cli-proxy-api.exe
+.\.venv\Scripts\python.exe main.py
+.\.venv\Scripts\python.exe build.py
+```
 
-运行时的 `data/` 目录可能包含账号登录凭据、API Key 和其他私人信息，请勿提交到仓库或随程序包分享。仓库的 `.gitignore` 已排除常见运行数据、凭据和本地配置。
+产物位于 dist/AI号池管理器。core/ 为后端，web/ 为前端，tools/ 为测试，docs/ 为说明。内部代理为独立第三方进程。
 
-## 源码与许可
+```powershell
+.\.venv\Scripts\python.exe tools/test_regressions.py
+.\.venv\Scripts\python.exe tools/test_plus_fallback.py
+.\.venv\Scripts\python.exe tools/test_plus_priority.py
+cd tools/ui-tests
+npm ci
+npm test
+```
 
-本次上传为程序发行包，不代表已完成完整源码开源。仓库暂未为项目本身声明开源许可证；第三方组件保留其各自的许可，随包附带的许可文件见 `_internal` 内的相关目录。
+离线测试使用临时数据和模拟上游，不需账号凭据；前端测试需使用支持 JSDOM 30 的 Node.js。
+
+## 使用限制与数据
+
+额度默认约每 30 秒检查，切回发生在后续新请求，已输出回答不会重放。首次启用账号专属路由或新增账号后需重新启动一次号池。当前账号专属路由与备用通道均拒绝 previous_response_id，客户端需发送完整历史或开启新会话。未知额度会保留优先账号，可能暂时阻止使用后备组。
+
+data/ 包含账号凭据、客户端 Key、提供商 Key 和日志，请自行备份且不要上传。发布包不含 data/、seed/ 或预置账号。程序未签名；管理密码留空时仅允许本机管理，远程管理需设置密码。
+
+详情见 [使用说明](docs/使用说明.md) 和 [快速开始](docs/先看这里.txt)。
+
+## 许可
+
+本项目原创部分使用 [MIT](LICENSE)。第三方组件与参考项目见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+

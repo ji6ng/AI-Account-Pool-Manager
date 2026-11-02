@@ -1,0 +1,6 @@
+fastapi>=0.100
+uvicorn
+httpx
+pystray
+pillow
+pyinstaller

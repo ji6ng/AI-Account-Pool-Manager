@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "jsdom": "^30.1.3"
+  },
+  "private": true,
+  "scripts": {
+    "test": "node test-ui.mjs",
+    "test:login": "node test-gemini-login.mjs",
+    "test:quota": "node test-gemini-quota.mjs",
+    "test:scope": "node test-key-scope.mjs"
+  }
+}
