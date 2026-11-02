@@ -107,6 +107,12 @@ def _copy_docs() -> None:
             log(f"已放入 {fn}")
 
 
+def _copy_licenses() -> None:
+    for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+        shutil.copy2(ROOT / name, DIST / name)
+    shutil.copytree(ROOT / 'licenses', DIST / 'licenses', dirs_exist_ok=True)
+
+
 def _drop_build_exe() -> None:
     """build/<name>/<name>.exe 是 EXE 阶段的中间产物，缺 _internal 跑不起来，
     留着容易被人误点，直接删掉。"""
@@ -150,6 +156,7 @@ def main() -> int:
     trash = _retire_old_dist()
     _run_pyinstaller()
     _copy_docs()
+    _copy_licenses()
     _drop_build_exe()
     _drop_trash(trash)
 
