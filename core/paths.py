@@ -1,16 +1,17 @@
 """路径解析：区分「程序文件」和「用户数据」。
 
-打包成 exe 后：
-  - 程序资源（web 页面、内置的 cli-proxy-api.exe）在 sys._MEIPASS 里，只读；
-  - 数据（配置、账号、数据库、日志）放在 exe 同级的 data 目录，便于整个文件夹搬走；
-    如果同级目录不可写（比如放进了 Program Files），退回到 %APPDATA%\\AIPool。
-开发态则统一放在工程根目录下。
+打包后：
+  - 程序资源（web 页面、内置的 cli-proxy-api）在 sys._MEIPASS 里，只读；
+  - Windows 优先使用程序同级的 data，不可写时退回 %APPDATA%\\AIPool；
+  - macOS 使用 ~/Library/Application Support/AIPool，不向 .app 包内写数据。
+开发态优先放在工程根目录下，不可写时使用系统用户数据目录。
 """
 from __future__ import annotations
 
 import os
 import pathlib
 import secrets
+import subprocess
 import sys
 import tempfile
 import threading
@@ -24,9 +25,14 @@ def is_frozen() -> bool:
 
 
 def app_dir() -> pathlib.Path:
-    """exe 所在目录（开发态是工程根目录）。"""
+    """程序所在目录（macOS 为 .app 的上级目录，开发态为工程根目录）。"""
     if is_frozen():
-        return pathlib.Path(sys.executable).resolve().parent
+        executable = pathlib.Path(sys.executable).resolve()
+        if sys.platform == "darwin":
+            for parent in executable.parents:
+                if parent.suffix == ".app":
+                    return parent.parent
+        return executable.parent
     return pathlib.Path(__file__).resolve().parent.parent
 
 
@@ -80,10 +86,19 @@ def data_dir() -> pathlib.Path:
         if _resolved is not None:
             return _resolved
         portable = app_dir() / "data"
-        if _writable(portable):
+        if sys.platform == "darwin" and is_frozen():
+            _resolved = pathlib.Path.home() / "Library" / "Application Support" / APP_NAME
+            _resolved.mkdir(parents=True, exist_ok=True)
+        elif _writable(portable):
             _resolved = portable
         else:
-            roaming = pathlib.Path(os.getenv("APPDATA") or tempfile.gettempdir()) / APP_NAME
+            if sys.platform == "win32":
+                base = pathlib.Path(os.getenv("APPDATA") or tempfile.gettempdir())
+            elif sys.platform == "darwin":
+                base = pathlib.Path.home() / "Library" / "Application Support"
+            else:
+                base = pathlib.Path(os.getenv("XDG_DATA_HOME") or pathlib.Path.home() / ".local" / "share")
+            roaming = base / APP_NAME
             roaming.mkdir(parents=True, exist_ok=True)
             _resolved = roaming
         return _resolved
@@ -117,8 +132,28 @@ def auth_file(name: str) -> pathlib.Path | None:
     return candidate if candidate.parent == root else None
 
 
+def vendor_bin_name() -> str:
+    """内置程序文件名：只有 Windows 带 .exe 后缀。"""
+    return "cli-proxy-api.exe" if sys.platform == "win32" else "cli-proxy-api"
+
+
 def vendor_bin() -> pathlib.Path:
-    return res_dir() / "vendor" / "cli-proxy-api.exe"
+    """当前平台的内置程序路径。"""
+    return res_dir() / "vendor" / vendor_bin_name()
+
+
+def prepare_vendor_bin(exe: pathlib.Path) -> None:
+    """启动前补齐执行权限，并尽力清除 macOS 下载隔离标记。"""
+    if os.name == "nt":
+        return
+    if not os.access(exe, os.X_OK):
+        exe.chmod(exe.stat().st_mode | 0o111)
+    if sys.platform == "darwin":
+        try:
+            subprocess.run(["xattr", "-d", "com.apple.quarantine", str(exe)],
+                           capture_output=True, timeout=5, check=False)
+        except Exception:
+            pass
 
 
 def web_dir() -> pathlib.Path:

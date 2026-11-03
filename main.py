@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import pathlib
+import plistlib
 import shutil
+import signal
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -36,6 +40,13 @@ def _alert(msg: str) -> None:
             import ctypes
 
             ctypes.windll.user32.MessageBoxW(None, msg, UI_TITLE, 0x40)
+        elif sys.platform == "darwin":
+            def quote(text: str) -> str:
+                return '"' + text.replace('\\', '\\\\').replace('"', '\\"').replace('\r', '\\r').replace('\n', '\\n') + '"'
+
+            script = f'display dialog {quote(msg)} buttons {{"好"}} with title {quote(UI_TITLE)}'
+            subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
@@ -184,6 +195,21 @@ def _seed_accounts() -> None:
 
 
 def _apply_autostart(enabled: bool) -> None:
+    if sys.platform == "darwin":
+        try:
+            agent = pathlib.Path.home() / "Library" / "LaunchAgents" / "com.aipool.manager.plist"
+            if not enabled:
+                agent.unlink(missing_ok=True)
+            elif paths.is_frozen():
+                agent.parent.mkdir(parents=True, exist_ok=True)
+                payload = {"Label": "com.aipool.manager",
+                           "ProgramArguments": [sys.executable], "RunAtLoad": True}
+                temporary = agent.with_suffix(".plist.tmp")
+                temporary.write_bytes(plistlib.dumps(payload))
+                temporary.replace(agent)
+        except Exception as e:
+            _log(f"设置开机自启失败：{e}")
+        return
     if os.name != "nt":
         return
     try:
@@ -229,16 +255,20 @@ def _prepare_ports() -> None:
         settings.save({"ui_port": ui_port})
 
 
-def _boot_pool_async() -> None:
+def _boot_pool_async(stopping: threading.Event) -> threading.Thread:
     def _run():
-        time.sleep(0.4)
+        if stopping.wait(0.4):
+            return
         try:
-            r = pool.start()
+            # POSIX 只等待进程创建，关闭时才能及时 join；端口健康由管理界面检查。
+            r = pool.start(wait=os.name == "nt")
             _log(f"号池启动：{r}")
         except Exception:
             _log("号池启动异常：\n" + traceback.format_exc())
 
-    threading.Thread(target=_run, daemon=True).start()
+    worker = threading.Thread(target=_run, daemon=True)
+    worker.start()
+    return worker
 
 
 # ---------------------------------------------------------------- 主流程
@@ -274,9 +304,10 @@ def main(argv: Optional[list] = None) -> int:
             return 0
         # 进程在、界面不通：这时候要是在同一个数据目录再起一个号池，
         # 两个进程会抢同一批凭据文件去刷新 token，比让用户手动结束更危险。
+        monitor = "活动监视器" if sys.platform == "darwin" else "任务管理器"
         msg = (
             f"检测到程序已在运行（进程号 {holder}），但管理界面没有响应。\n\n"
-            f"请打开任务管理器，结束进程号 {holder}，然后重新打开本程序。"
+            f"请打开{monitor}，结束进程号 {holder}，然后重新打开本程序。"
         )
         _log(msg.replace("\n", " "))
         _alert(msg)
@@ -300,8 +331,6 @@ def main(argv: Optional[list] = None) -> int:
         _apply_autostart(bool(cfg.get("autostart")))
     _update_lock(int(cfg["ui_port"]))
 
-    _boot_pool_async()
-
     port = int(cfg["ui_port"])
     url = f"http://127.0.0.1:{port}/"
 
@@ -319,7 +348,19 @@ def main(argv: Optional[list] = None) -> int:
 
     threading.Thread(target=_open_later, daemon=True).start()
 
+    stopping = threading.Event()
+    pool_worker = None
+    previous_handlers = {}
+
+    def _exit_on_signal(signum, frame):
+        # uvicorn 关闭后会恢复并重新触发原信号；SystemExit 保证执行下面的 finally。
+        raise SystemExit(0)
+
     try:
+        if os.name != "nt":
+            for signum in (signal.SIGTERM, signal.SIGHUP):
+                previous_handlers[signum] = signal.signal(signum, _exit_on_signal)
+        pool_worker = _boot_pool_async(stopping)
         import uvicorn
 
         from core.gateway import app as webapp
@@ -331,11 +372,17 @@ def main(argv: Optional[list] = None) -> int:
         _log("Web 服务异常：\n" + traceback.format_exc())
         raise
     finally:
+        stopping.set()
         try:
+            # 等待启动线程越过检查/创建进程的竞态，再统一停止，避免关完后又启动。
+            if pool_worker is not None and os.name != "nt":
+                pool_worker.join()
             pool.stop()
         except Exception:
             pass
         _release_lock()
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
     return 0
 
 

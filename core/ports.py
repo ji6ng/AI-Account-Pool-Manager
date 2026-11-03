@@ -18,6 +18,7 @@ def is_free(port: int, host: str = "0.0.0.0") -> bool:
       - Windows 上 SO_REUSEADDR 会让 bind 抢到别人正在 LISTEN 的端口
         （cli-proxy-api 就是这种程序），只看 bind 会误判为空闲；
       - 反过来，某些被系统保留的端口 connect 不通但 bind 也会失败。
+    bind 探针不启用 SO_REUSEADDR，避免 macOS/Linux 的地址复用影响占用判断。
     """
     if _connectable(port):
         return False

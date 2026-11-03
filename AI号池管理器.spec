@@ -8,6 +8,10 @@
 （build/build/），里面那个 exe 缺 _internal，双击就报 Failed to load Python DLL。
 """
 
+import sys
+
+IS_MAC = sys.platform == "darwin"
+
 HIDDEN = [
     "uvicorn.logging",
     "uvicorn.loops",
@@ -28,7 +32,7 @@ HIDDEN = [
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=[("vendor/cli-proxy-api.exe", "vendor")],
+    binaries=[("vendor/cli-proxy-api" if IS_MAC else "vendor/cli-proxy-api.exe", "vendor")],
     datas=[
         ("web", "web"),
         ("vendor/modeltrace", "vendor/modeltrace"),
@@ -59,7 +63,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="app.ico",
+    icon="app.icns" if IS_MAC else "app.ico",
 )
 
 coll = COLLECT(
@@ -71,3 +75,17 @@ coll = COLLECT(
     upx_exclude=[],
     name="AI号池管理器",
 )
+
+if IS_MAC:
+    app = BUNDLE(
+        coll,
+        name="AI号池管理器.app",
+        icon="app.icns",
+        bundle_identifier="com.aipool.manager",
+        info_plist={
+            "CFBundleShortVersionString": "1.2.17",
+            "LSUIElement": True,
+            "NSHighResolutionCapable": True,
+            "LSMinimumSystemVersion": "11.0",
+        },
+    )

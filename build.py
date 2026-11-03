@@ -1,7 +1,7 @@
 """一键重建绿色包：python build.py
 
 做四件事：
-  1. 把上一次的 dist 目录挪到系统临时目录（不原地删，避开批量删除保护）
+  1. 把上一次的产物挪到项目上一级 .build-trash（同盘改名）
   2. 调 PyInstaller 打包
   3. 把说明书放进包里
   4. 删掉 build 目录里那个缺 _internal、双击会报 DLL 错的中间 exe
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import platform
 import shutil
 import subprocess
 import sys
@@ -22,8 +23,10 @@ ROOT = pathlib.Path(__file__).resolve().parent
 NAME = "AI号池管理器"
 SPEC = ROOT / f"{NAME}.spec"
 DIST_ROOT = ROOT / "dist"
-DIST = DIST_ROOT / NAME
+IS_MAC = sys.platform == "darwin"
+DIST = DIST_ROOT / (f"{NAME}-macOS" if IS_MAC else NAME)
 WORK = ROOT / "build" / NAME
+PYINSTALLER_DIST = WORK / "dist" if IS_MAC else DIST_ROOT
 DOCS = ["使用说明.md", "先看这里.txt"]
 
 
@@ -39,6 +42,19 @@ def _retire_old_dist() -> pathlib.Path | None:
       · 挪到系统临时目录会跨盘符（本项目在 C:，TEMP 常在 D:），rename 会抛 WinError 17。
     所以固定挪到「项目上一级/.build-trash/」——同盘符、瞬时就够了，之后再去回收站。
     """
+    if IS_MAC:
+        candidates = [DIST, DIST_ROOT / f"{NAME}-macos-{platform.machine()}.zip"]
+        old_paths = [path for path in candidates if path.exists() or path.is_symlink()]
+        if not old_paths:
+            return None
+        stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{time.time_ns()}"
+        trash = ROOT.parent / ".build-trash" / stamp
+        trash.mkdir(parents=True, exist_ok=True)
+        for path in old_paths:
+            path.rename(trash / path.name)
+        log(f"旧产物已挪到 {trash}")
+        return trash
+
     if not DIST.exists():
         return None
     stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -91,7 +107,7 @@ def _run_pyinstaller() -> None:
         sys.executable, "-m", "PyInstaller", str(SPEC),
         "--noconfirm",
         "--workpath", str(WORK),
-        "--distpath", str(DIST_ROOT),
+        "--distpath", str(PYINSTALLER_DIST),
     ]
     log("开始打包…")
     r = subprocess.run(cmd, cwd=str(ROOT))
@@ -99,8 +115,20 @@ def _run_pyinstaller() -> None:
         raise SystemExit(f"PyInstaller 失败，退出码 {r.returncode}")
 
 
+def _prepare_mac_bundle() -> None:
+    app = PYINSTALLER_DIST / f"{NAME}.app"
+    if not app.is_dir():
+        raise SystemExit(f"未生成预期应用：{app}")
+    DIST.mkdir(parents=True, exist_ok=True)
+    app = pathlib.Path(shutil.move(str(app), str(DIST / app.name)))
+    try:
+        subprocess.run(["codesign", "--force", "--deep", "-s", "-", str(app)], check=True)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        log(f"临时签名失败（可忽略）：{exc}")
+
+
 def _copy_docs() -> None:
-    for fn in DOCS:
+    for fn in DOCS + (["macOS说明.md"] if IS_MAC else []):
         src = ROOT / "docs" / fn
         if src.exists():
             shutil.copy2(src, DIST / fn)
@@ -138,6 +166,10 @@ def _drop_trash(trash: pathlib.Path | None) -> None:
 def _make_zip(out: pathlib.Path) -> None:
     if out.exists():
         out.unlink()
+    if IS_MAC:
+        subprocess.run(["ditto", "-c", "-k", "--keepParent", str(DIST), str(out.resolve())], check=True)
+        log(f"已生成 {out}（{out.stat().st_size / 1024 / 1024:.1f} MB）")
+        return
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for p in sorted(DIST.rglob("*")):
             z.write(p, pathlib.Path(NAME) / p.relative_to(DIST))
@@ -147,21 +179,26 @@ def _make_zip(out: pathlib.Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="重建 AI 号池管理器绿色包")
     ap.add_argument("--no-zip", action="store_true", help="不生成 zip")
-    ap.add_argument("--zip", default="", help="zip 输出路径，默认 dist/AI号池管理器.zip")
+    ap.add_argument("--zip", default="", help="zip 输出路径；macOS 默认附带 macos-<arch>，Windows 默认 dist/AI号池管理器.zip")
     args = ap.parse_args()
 
     if not SPEC.exists():
         raise SystemExit(f"找不到 {SPEC.name}")
 
+    if IS_MAC and not (ROOT / "vendor" / "cli-proxy-api").is_file():
+        raise SystemExit("缺少 vendor/cli-proxy-api，请先运行 bash tools/fetch_cli_proxy_api.sh")
     trash = _retire_old_dist()
     _run_pyinstaller()
+    if IS_MAC:
+        _prepare_mac_bundle()
     _copy_docs()
     _copy_licenses()
-    _drop_build_exe()
+    if not IS_MAC:
+        _drop_build_exe()
     _drop_trash(trash)
 
     if not args.no_zip:
-        out = pathlib.Path(args.zip) if args.zip else DIST_ROOT / f"{NAME}.zip"
+        out = pathlib.Path(args.zip) if args.zip else DIST_ROOT / (f"{NAME}-macos-{platform.machine()}.zip" if IS_MAC else f"{NAME}.zip")
         _make_zip(out)
 
     log("完成")

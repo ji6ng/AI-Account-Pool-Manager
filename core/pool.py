@@ -91,6 +91,7 @@ class Pool:
             self._log_fh = open(log_file, "ab", buffering=0)
             cmd = [str(exe.resolve()), "-config", str(proxycfg.config_path().resolve())]
             try:
+                paths.prepare_vendor_bin(exe)
                 self.proc = subprocess.Popen(
                     cmd,
                     cwd=str(paths.pool_dir().resolve()),
@@ -99,9 +100,11 @@ class Pool:
                     stdin=subprocess.DEVNULL,
                     creationflags=CREATE_NO_WINDOW if os.name == "nt" else 0,
                     startupinfo=_startupinfo(),
+                    start_new_session=os.name != "nt",
                 )
             except Exception as e:
-                self.last_error = f"启动失败：{e}"
+                self._close_log()
+                self.last_error = f"启动 {paths.vendor_bin_name()} 失败：{e}"
                 return {"ok": False, "error": self.last_error}
 
             self.started_at = time.time()
@@ -113,6 +116,9 @@ class Pool:
             if ok and self.proc is not None and self.proc.poll() is not None:
                 code = self.proc.returncode
                 tail = self.tail(8)
+                if os.name != "nt":
+                    accounts._stop_process(self.proc)
+                self._close_log()
                 self.proc = None
                 self.last_error = f"号池进程启动后立即退出（退出码 {code}），端口可能被别的程序占用"
                 return {"ok": False, "error": self.last_error, "log": tail}
@@ -125,22 +131,15 @@ class Pool:
     def stop(self, timeout: float = 8.0) -> Dict[str, Any]:
         with _lock:
             if not self.running():
+                if self.proc is not None and os.name != "nt":
+                    accounts._stop_process(self.proc, timeout=timeout)
+                self.proc = None
+                self.started_at = 0.0
                 self._close_log()
                 return {"ok": True, "already": True}
             proc = self.proc
             assert proc is not None
-            try:
-                if os.name == "nt":
-                    subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-                                   capture_output=True, timeout=10)
-                else:
-                    proc.terminate()
-                proc.wait(timeout=timeout)
-            except Exception:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
+            accounts._stop_process(proc, timeout=timeout)
             self.proc = None
             self.started_at = 0.0
             self._close_log()
