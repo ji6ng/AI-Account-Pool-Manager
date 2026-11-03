@@ -1565,6 +1565,7 @@ $('#btn-key-save').onclick = async () => {
 const CLIENT_STATUS = {
   ok: { label: '已接入', cls: 'ok' },
   drift: { label: '地址已失效', cls: 'err' },
+  conflict: { label: '模型目录冲突', cls: 'err' },
   missing: { label: '未安装', cls: 'off' },
   broken: { label: '配置损坏', cls: 'err' },
 };
@@ -1618,6 +1619,7 @@ function clientCardHtml(c) {
   } else if (c.status === 'broken') {
     warn = `<div class="notice mt16">${esc(c.error || '配置文件无法解析')}</div>`;
   }
+  if (c.warning) warn += `<div class="notice mt16">${esc(c.warning)}</div>`;
 
   const keyOptions = keys.map(k => `<option value="${k.id}" ${k.id === d.keyId ? 'selected' : ''}>${esc(k.name)}（${esc(k.model_list.includes('*') ? '全部模型' : k.model_list.length + ' 个模型')}）</option>`).join('');
   const modelOptions = catalog.map(id => `<option value="${esc(id)}" ${id === d.model ? 'selected' : ''}>${esc(id)}</option>`).join('');
@@ -1679,7 +1681,8 @@ function renderClients() {
         S.clientMeta.clients = res.clients;
         renderClients();
         const name = String(res.backup || '').split(/[\\/]/).pop();
-        toast(`${c.label} 已写入${name ? '，原文件备份 ' + name : ''}。重启客户端后生效。`, 'ok', 6000);
+        const disabled = (res.disabled || []).length ? `已停用其它工具设置的 ${res.disabled.join('、')}（会覆盖号池模型目录），原值已注释保留。` : '';
+        toast(`${c.label} 已写入${name ? '，原文件备份 ' + name : ''}。${disabled}重启客户端后生效。`, 'ok', disabled ? 12000 : 6000);
       } catch (e) {
         toast(e.message, 'err', 6000);
       } finally {

@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "test": "node test-ui.mjs",
+    "test:clients": "node test-client-catalog.mjs",
     "test:login": "node test-gemini-login.mjs",
     "test:quota": "node test-gemini-quota.mjs",
     "test:scope": "node test-key-scope.mjs"

@@ -28,3 +28,7 @@ outputs/
 .build-trash/
 .idea/
 .vscode/
+
+# macOS build environment and downloaded core
+.venv-build/
+vendor/cli-proxy-api

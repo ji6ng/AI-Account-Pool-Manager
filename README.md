@@ -1,6 +1,6 @@
 # AI 号池管理器
 
-在 Windows 上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.17**。
+在 Windows / macOS 上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.17**。
 
 本仓库包含完整 Python 后端、网页前端、构建脚本及离线测试。Windows 用户可直接下载绿色包，无需安装 Python。
 
@@ -45,6 +45,30 @@ npm test
 ```
 
 离线测试使用临时数据和模拟上游，不需账号凭据；前端测试需使用支持 JSDOM 30 的 Node.js。
+
+## macOS
+
+macOS 11 或更新版本，使用与本机架构一致的 Python（Apple Silicon 用 arm64，Intel 用 x86_64）：
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+bash tools/fetch_cli_proxy_api.sh
+.venv/bin/python main.py
+# 构建 .app 和保留权限、符号链接的 zip
+.venv/bin/python build.py
+```
+
+下载脚本默认获取 CLIProxyAPI v8.0.40，并验证发布校验和；可用 `VERSION=v8.0.40 bash tools/fetch_cli_proxy_api.sh` 指定版本。
+构建产物为 `dist/AI号池管理器-macOS/AI号池管理器.app`，旁边包含说明与许可证；压缩包为 `dist/AI号池管理器-macos-<arch>.zip`。可将 `.app` 拖入「应用程序」后打开。
+
+应用仅做临时签名，未经 Apple 公证。首次打开若被 Gatekeeper 拦截，确认来源可信后右键应用选择「打开」；或对实际安装路径执行：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/AI号池管理器.app"
+```
+
+打包应用的数据位于 `~/Library/Application Support/AIPool`，升级前备份此目录；开发运行仍使用仓库 `data/`，也可用 `--data-dir` 指定目录。应用在后台运行，没有 Dock 图标；再次打开应用只会打开已有的管理页面。关闭浏览器后服务继续运行，退出请用「设置 → 退出程序」。更多说明见 [macOS说明](docs/macOS说明.md)。
 
 ## 使用限制与数据
 

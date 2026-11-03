@@ -13,6 +13,7 @@ import os
 import re
 import secrets
 import subprocess
+import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
@@ -648,6 +649,8 @@ def create_app() -> FastAPI:
         d = str(paths.data_dir())
         if os.name == "nt":
             subprocess.Popen(["explorer", d])
+        else:
+            subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", d])
         return {"ok": True, "dir": d}
 
     @app.post("/api/system/quit")

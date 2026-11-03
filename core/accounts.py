@@ -10,6 +10,7 @@ import json
 import os
 import queue
 import re
+import signal
 import subprocess
 import threading
 import time
@@ -241,6 +242,34 @@ def provider_of(data: Dict[str, Any]) -> str:
     return t or "codex"
 
 
+def _stop_process(proc: subprocess.Popen, timeout: float = 3.0) -> None:
+    """结束登录/号池的整棵进程树，避免回调服务和孙进程残留。"""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                           capture_output=True, timeout=10)
+        else:
+            # 子进程通过 start_new_session 创建，组号固定为它自己的 PID。
+            os.killpg(proc.pid, signal.SIGTERM)
+        proc.wait(timeout=timeout)
+    except Exception:
+        pass
+    finally:
+        try:
+            if os.name == "nt":
+                if proc.poll() is None:
+                    proc.kill()
+            else:
+                # 主进程先退出时，组里仍可能有忽略 SIGTERM 的孙进程。
+                os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, OSError):
+            pass
+        try:
+            proc.wait(timeout=timeout)
+        except Exception:
+            pass
+
+
 def start_login(pool_key: str, provider: str = "codex") -> Dict[str, Any]:
     provider = (provider or "codex").strip().lower()
     spec = _LOGIN.get(provider)
@@ -249,7 +278,7 @@ def start_login(pool_key: str, provider: str = "codex") -> Dict[str, Any]:
 
     exe = paths.vendor_bin()
     if not exe.exists():
-        return {"ok": False, "error": "缺少内置程序 cli-proxy-api.exe"}
+        return {"ok": False, "error": f"缺少内置程序 {paths.vendor_bin_name()}"}
     if not aliases_for(pool_key):
         return {"ok": False, "error": f"{pool_key} 池还没有配置模型"}
 
@@ -270,6 +299,7 @@ def start_login(pool_key: str, provider: str = "codex") -> Dict[str, Any]:
         callback_port = ports.pick(18450, host="127.0.0.1")
         args += ["-no-browser", "-oauth-callback-port", str(callback_port)]
 
+    paths.prepare_vendor_bin(exe)
     proc = subprocess.Popen(
         args,
         cwd=str(paths.pool_dir().resolve()),
@@ -283,6 +313,7 @@ def start_login(pool_key: str, provider: str = "codex") -> Dict[str, Any]:
         bufsize=1,
         creationflags=flags,
         startupinfo=si,
+        start_new_session=os.name != "nt",
     )
     q: "queue.Queue[str]" = queue.Queue()
     threading.Thread(target=_reader, args=(proc, q), daemon=True).start()
@@ -375,19 +406,16 @@ def _watch(ses: Dict[str, Any]) -> None:
         if time.time() - ses["started"] > 900:
             ses["status"] = "timeout"
             ses["error"] = "15 分钟内没有完成授权，请重试"
-            try:
-                proc.kill()
-            except Exception:
-                pass
+            _stop_process(proc)
             return
 
     try:
         proc.wait(timeout=3)
     except Exception:
-        try:
-            proc.kill()
-        except Exception:
-            pass
+        _stop_process(proc)
+    else:
+        if os.name != "nt":
+            _stop_process(proc)
 
     if file_seen:
         res = assign_pool(file_seen, ses["pool"])
@@ -439,10 +467,7 @@ def cancel_login(sid: str) -> Dict[str, Any]:
             proc.stdin.close()
     except Exception:
         pass
-    try:
-        proc.kill()
-    except Exception:
-        pass
+    _stop_process(proc)
     ses["status"] = "failed"
     ses["error"] = "已取消"
     return {"ok": True}
@@ -452,6 +477,7 @@ def cleanup_sessions(max_age: float = 1800) -> None:
     now = time.time()
     for sid in list(_sessions):
         if now - _sessions[sid]["started"] > max_age:
+            cancel_login(sid)
             _sessions.pop(sid, None)
 
 
