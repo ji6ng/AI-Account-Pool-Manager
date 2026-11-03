@@ -12,6 +12,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import sys
 import time
@@ -23,7 +24,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import (__version__, accounts, clients, codex, codexcat, gemini, gemini_direct, keys,
+from . import (__version__, accounts, autostart, clients, codex, codexcat, gemini, gemini_direct, keys,
                modeltrace, netinfo, paths, plus_fallback, plus_priority, poolapi, providers, proxycfg, settings)
 from .pool import pool
 
@@ -543,6 +544,8 @@ def create_app() -> FastAPI:
         else:
             new = settings.save(body)
         app.state.plus_fallback.wake.set()
+        if sys.platform.startswith("linux") and old.get("autostart") != new.get("autostart"):
+            await asyncio.to_thread(autostart.apply, bool(new.get("autostart")))
         need_restart = (
             int(old.get("pool_port", 0)) != int(new.get("pool_port", 0))
             or (old.get("proxy_url") or "") != (new.get("proxy_url") or "")
@@ -647,6 +650,16 @@ def create_app() -> FastAPI:
     async def api_open_folder(request: Request):
         require_admin(request)
         d = str(paths.data_dir())
+        if sys.platform.startswith("linux"):
+            from core import runmode
+            from core.linux_desktop import has_display
+            opener = shutil.which("xdg-open") if runmode.is_desktop() and has_display() else None
+            if opener:
+                try:
+                    subprocess.Popen([opener, d])
+                except OSError:
+                    return {"ok": True, "dir": d, "opened": False}
+            return {"ok": True, "dir": d, "opened": bool(opener)}
         if os.name == "nt":
             subprocess.Popen(["explorer", d])
         else:

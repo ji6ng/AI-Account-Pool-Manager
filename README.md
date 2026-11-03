@@ -1,6 +1,6 @@
 # AI 号池管理器
 
-在 Windows / macOS 上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.18**。
+在 Windows / macOS / Linux 上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.18**。
 
 本仓库包含完整 Python 后端、网页前端、构建脚本及离线测试。Windows 用户可直接下载绿色包，无需安装 Python。
 
@@ -69,6 +69,30 @@ xattr -dr com.apple.quarantine "/Applications/AI号池管理器.app"
 ```
 
 打包应用的数据位于 `~/Library/Application Support/AIPool`，升级前备份此目录；开发运行仍使用仓库 `data/`，也可用 `--data-dir` 指定目录。应用在后台运行，没有 Dock 图标；再次打开应用只会打开已有的管理页面。关闭浏览器后服务继续运行，退出请用「设置 → 退出程序」。更多说明见 [macOS说明](docs/macOS说明.md)。
+
+## Linux：桌面与服务器模式
+
+统一下载 `AI号池管理器-linux-<arch>.tar.gz`，完整解压后运行
+`AI号池管理器-linux/AI号池管理器/AI号池管理器`。
+Linux 优先使用互斥的 `--desktop` / `--server`，其次使用 `AIPOOL_MODE=desktop|server`，
+最后自动检测：有 DISPLAY/WAYLAND_DISPLAY 则桌面模式，否则服务器模式。无效环境值会警告并忽略。
+桌面模式打开浏览器并支持应用菜单安装（包内 `bash install-desktop.sh`；`--uninstall` 卸载），
+服务器模式不启动浏览器/对话框，打印 URL 和终端日志。桌面失去显示环境时只打印 URL。
+
+```bash
+cd AI号池管理器-linux
+./AI号池管理器/AI号池管理器 --set-password
+./AI号池管理器/AI号池管理器 --server --host 127.0.0.1
+# 在本地电脑建立隧道，再浏览 http://127.0.0.1:8320/
+ssh -N -L 8320:127.0.0.1:8320 user@server
+```
+
+`--set-password` 支持隐藏输入或 `AIPOOL_ADMIN_PASSWORD`；`--host` 仅本次有效。
+未设密码仅允许本机管理。设置页自启立即生效：桌面使用 XDG 条目，服务器使用 systemd 用户服务，
+模式切换会移除另一条目。系统服务模板随包提供；开机免登录需管理员启用 linger。
+Linux 构建先执行 `bash tools/fetch_cli_proxy_api.sh` 再执行 `python build.py`，
+生成 `dist/AI号池管理器-linux/` 和单一 tar.gz。需要 glibc ≥ 构建机，不适用于 musl/Alpine。
+密码、远程访问、防火墙、systemd、数据目录、代理及构建细节见 [Linux说明](docs/Linux说明.md)。
 
 ## 使用限制与数据
 

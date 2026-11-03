@@ -18,7 +18,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import main
-from core import accounts, clients, paths, ports
+from core import accounts, autostart, clients, paths, ports
 from core.pool import Pool
 
 
@@ -72,14 +72,14 @@ class PlatformTests(unittest.TestCase):
         agent = self.home / "Library/LaunchAgents/com.aipool.manager.plist"
         exe = str(self.home / "AI号池管理器.app/Contents/MacOS/AI号池管理器")
         with patch.object(sys, "platform", "darwin"), patch.object(sys, "executable", exe), patch.object(sys, "frozen", False, create=True):
-            main._apply_autostart(True)
+            autostart.apply(True)
             self.assertFalse(agent.exists())
             with patch.object(sys, "frozen", True):
-                main._apply_autostart(True)
+                autostart.apply(True)
                 self.assertEqual(plistlib.loads(agent.read_bytes()), {"Label": "com.aipool.manager", "ProgramArguments": [exe], "RunAtLoad": True})
-            main._apply_autostart(False)
+            autostart.apply(False)
             self.assertFalse(agent.exists())
-            main._apply_autostart(False)
+            autostart.apply(False)
 
     def test_alert_escaping_and_failure(self):
         with patch.object(sys, "platform", "darwin"), patch.object(main.subprocess, "Popen") as spawn:
@@ -105,7 +105,7 @@ class PlatformTests(unittest.TestCase):
         with patch.dict(os.environ, {"USERPROFILE": "", "AIPOOL_CLIENT_HOME": ""}):
             self.assertEqual(clients.client_home(), self.home)
         with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
+            listener.bind(("127.0.0.1", int(os.environ.get("AIPOOL_TEST_PORT", "0"))))
             port = listener.getsockname()[1]
             self.assertFalse(ports.is_free(port, "127.0.0.1"))
             listener.listen()
@@ -167,7 +167,9 @@ while True: time.sleep(.1)
                 auth = data / "pool/auths"
                 auth.mkdir(parents=True)
                 (auth / "offline.json").write_text("{}")
-                (data / "settings.json").write_text('{"listen_host": "127.0.0.1"}')
+                test_port = int(os.environ.get("AIPOOL_TEST_PORT", "8320"))
+                (data / "settings.json").write_text(json.dumps({"listen_host": "127.0.0.1",
+                                                               "ui_port": test_port, "pool_port": test_port + 1}))
                 pid_file = root / "child.pid"
                 marker = root / "starting"
                 fake = root / "fake-vendor"
