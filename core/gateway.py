@@ -12,6 +12,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import sys
 import time
@@ -649,6 +650,15 @@ def create_app() -> FastAPI:
         d = str(paths.data_dir())
         if os.name == "nt":
             subprocess.Popen(["explorer", d])
+        elif sys.platform.startswith("linux"):
+            from core.linux_desktop import has_display
+            opener = shutil.which("xdg-open") if has_display() else None
+            if opener:
+                try:
+                    subprocess.Popen([opener, d])
+                except OSError:
+                    return {"ok": True, "dir": d, "opened": False}
+            return {"ok": True, "dir": d, "opened": bool(opener)}
         else:
             subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", d])
         return {"ok": True, "dir": d}

@@ -1,6 +1,6 @@
 # AI 号池管理器
 
-在 Windows / macOS 上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.18**。
+在 Windows / macOS / Linux 桌面上管理 ChatGPT / Gemini 账号、第三方提供商与客户端 Key，通过本地网关提供统一模型目录及 API。当前版本：**v1.2.18**。
 
 本仓库包含完整 Python 后端、网页前端、构建脚本及离线测试。Windows 用户可直接下载绿色包，无需安装 Python。
 
@@ -11,6 +11,16 @@
 3. 添加自己的账号或提供商，在客户端密钥页选择允许调用的模型并复制接入配置。实际地址以页面为准。
 
 关闭浏览器后服务仍会运行，在系统设置中退出。升级时先退出程序，备份并保留已有 data/，仅替换程序文件。
+
+## Linux 桌面版
+
+下载并完整解压 `AI号池管理器-linux-gui-<arch>.tar.gz`，运行其中
+`AI号池管理器-linux/AI号池管理器/AI号池管理器`。有图形桌面时自动打开浏览器，
+无显示环境时仅输出管理地址。可选运行包内 `bash install-desktop.sh` 安装应用菜单入口，
+用 `--uninstall` 移除。开机启动在设置页开启，退出请用「设置 → 退出程序」。
+Linux 构建先运行 `bash tools/fetch_cli_proxy_api.sh` 再运行 `python build.py`；
+产物要求系统 glibc 不低于构建机。数据目录、代理与详细操作见
+[Linux桌面版说明](docs/Linux桌面版说明.md)。
 
 ## 功能
 

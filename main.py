@@ -11,6 +11,7 @@ import socket
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 import traceback
 import webbrowser
@@ -18,6 +19,7 @@ from typing import Optional
 
 from core import accounts, keys, paths, ports, proxycfg, settings
 from core.pool import pool
+from core.linux_desktop import desktop_exec, has_display
 
 UI_TITLE = paths.PRODUCT_NAME
 
@@ -40,6 +42,23 @@ def _alert(msg: str) -> None:
             import ctypes
 
             ctypes.windll.user32.MessageBoxW(None, msg, UI_TITLE, 0x40)
+        elif sys.platform.startswith("linux"):
+            _log(msg)
+            if not has_display():
+                return
+            for tool, arguments in (
+                ("zenity", ["--info", "--title", UI_TITLE, "--text", msg]),
+                ("kdialog", ["--title", UI_TITLE, "--msgbox", msg]),
+                ("notify-send", [UI_TITLE, msg]),
+            ):
+                executable = shutil.which(tool)
+                if executable:
+                    try:
+                        subprocess.Popen([executable, *arguments], stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.DEVNULL)
+                        return
+                    except OSError:
+                        continue
         elif sys.platform == "darwin":
             def quote(text: str) -> str:
                 return '"' + text.replace('\\', '\\\\').replace('"', '\\"').replace('\r', '\\r').replace('\n', '\\n') + '"'
@@ -49,6 +68,14 @@ def _alert(msg: str) -> None:
                              stderr=subprocess.DEVNULL)
     except Exception:
         pass
+
+
+def _open_browser(url: str) -> None:
+    if sys.platform.startswith("linux") and not has_display():
+        print(f"管理地址：{url}", flush=True)
+        _log(f"管理地址：{url}")
+        return
+    webbrowser.open(url)
 
 
 def _already_running(port: int) -> bool:
@@ -195,6 +222,27 @@ def _seed_accounts() -> None:
 
 
 def _apply_autostart(enabled: bool) -> None:
+    if sys.platform.startswith("linux"):
+        temporary = None
+        try:
+            config = pathlib.Path(os.environ.get("XDG_CONFIG_HOME") or pathlib.Path.home() / ".config")
+            entry = config / "autostart" / "aipool-manager.desktop"
+            if not enabled:
+                entry.unlink(missing_ok=True)
+            elif paths.is_frozen():
+                entry.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=entry.parent,
+                                                 prefix=".aipool-", delete=False) as stream:
+                    temporary = pathlib.Path(stream.name)
+                    stream.write("[Desktop Entry]\nType=Application\nName=AI 号池管理器\n"
+                                 f"Exec={desktop_exec(sys.executable)}\nTerminal=false\n")
+                temporary.replace(entry)
+        except Exception as exc:
+            _log(f"设置开机自启失败：{exc}")
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+        return
     if sys.platform == "darwin":
         try:
             agent = pathlib.Path.home() / "Library" / "LaunchAgents" / "com.aipool.manager.plist"
@@ -300,7 +348,7 @@ def main(argv: Optional[list] = None) -> int:
         if url:
             _log(f"已有实例在运行（pid {holder}），打开 {url}")
             if not args.no_browser:
-                webbrowser.open(url)
+                _open_browser(url)
             return 0
         # 进程在、界面不通：这时候要是在同一个数据目录再起一个号池，
         # 两个进程会抢同一批凭据文件去刷新 token，比让用户手动结束更危险。
@@ -309,6 +357,9 @@ def main(argv: Optional[list] = None) -> int:
             f"检测到程序已在运行（进程号 {holder}），但管理界面没有响应。\n\n"
             f"请打开{monitor}，结束进程号 {holder}，然后重新打开本程序。"
         )
+        if sys.platform.startswith("linux"):
+            msg = (f"检测到程序已在运行（进程号 {holder}），但管理界面没有响应。\n\n"
+                   f"请用「系统监视器」或命令 kill {holder} 结束进程号 {holder}，然后重新打开本程序。")
         _log(msg.replace("\n", " "))
         _alert(msg)
         return 1
@@ -342,7 +393,7 @@ def main(argv: Optional[list] = None) -> int:
                 break
             time.sleep(0.2)
         try:
-            webbrowser.open(url)
+            _open_browser(url)
         except Exception:
             pass
 

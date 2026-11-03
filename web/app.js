@@ -1909,7 +1909,7 @@ $('#btn-gen-password').onclick = () => {
 $('#btn-open-folder').onclick = async () => {
   await withBusy($('#btn-open-folder'), async () => {
     const r = await api('/api/system/open-folder', { method: 'POST' });
-    toast('已打开：' + r.dir, 'ok');
+    toast((r.opened === false ? '数据目录：' : '已打开：') + r.dir, 'ok');
   });
 };
 $('#btn-quit').onclick = async () => {

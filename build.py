@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tarfile
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -24,9 +25,10 @@ NAME = "AI号池管理器"
 SPEC = ROOT / f"{NAME}.spec"
 DIST_ROOT = ROOT / "dist"
 IS_MAC = sys.platform == "darwin"
-DIST = DIST_ROOT / (f"{NAME}-macOS" if IS_MAC else NAME)
+IS_LINUX = sys.platform.startswith("linux")
+DIST = DIST_ROOT / (f"{NAME}-linux" if IS_LINUX else (f"{NAME}-macOS" if IS_MAC else NAME))
 WORK = ROOT / "build" / NAME
-PYINSTALLER_DIST = WORK / "dist" if IS_MAC else DIST_ROOT
+PYINSTALLER_DIST = WORK / "dist" if IS_MAC else (DIST if IS_LINUX else DIST_ROOT)
 DOCS = ["使用说明.md", "先看这里.txt"]
 
 
@@ -42,13 +44,15 @@ def _retire_old_dist() -> pathlib.Path | None:
       · 挪到系统临时目录会跨盘符（本项目在 C:，TEMP 常在 D:），rename 会抛 WinError 17。
     所以固定挪到「项目上一级/.build-trash/」——同盘符、瞬时就够了，之后再去回收站。
     """
-    if IS_MAC:
-        candidates = [DIST, DIST_ROOT / f"{NAME}-macos-{platform.machine()}.zip"]
+    if IS_MAC or IS_LINUX:
+        archive_name = (f"{NAME}-linux-gui-{platform.machine()}.tar.gz" if IS_LINUX
+                        else f"{NAME}-macos-{platform.machine()}.zip")
+        candidates = [DIST, DIST_ROOT / archive_name]
         old_paths = [path for path in candidates if path.exists() or path.is_symlink()]
         if not old_paths:
             return None
         stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{time.time_ns()}"
-        trash = ROOT.parent / ".build-trash" / stamp
+        trash = (ROOT / ".build-trash" if IS_LINUX else ROOT.parent / ".build-trash") / stamp
         trash.mkdir(parents=True, exist_ok=True)
         for path in old_paths:
             path.rename(trash / path.name)
@@ -128,7 +132,7 @@ def _prepare_mac_bundle() -> None:
 
 
 def _copy_docs() -> None:
-    for fn in DOCS + (["macOS说明.md"] if IS_MAC else []):
+    for fn in DOCS + (["macOS说明.md"] if IS_MAC else []) + (["Linux桌面版说明.md"] if IS_LINUX else []):
         src = ROOT / "docs" / fn
         if src.exists():
             shutil.copy2(src, DIST / fn)
@@ -166,6 +170,11 @@ def _drop_trash(trash: pathlib.Path | None) -> None:
 def _make_zip(out: pathlib.Path) -> None:
     if out.exists():
         out.unlink()
+    if IS_LINUX:
+        with tarfile.open(out, "w:gz", dereference=False) as archive:
+            archive.add(DIST, arcname=DIST.name)
+        log(f"已生成 {out}（{out.stat().st_size / 1024 / 1024:.1f} MB）")
+        return
     if IS_MAC:
         subprocess.run(["ditto", "-c", "-k", "--keepParent", str(DIST), str(out.resolve())], check=True)
         log(f"已生成 {out}（{out.stat().st_size / 1024 / 1024:.1f} MB）")
@@ -178,27 +187,34 @@ def _make_zip(out: pathlib.Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="重建 AI 号池管理器绿色包")
-    ap.add_argument("--no-zip", action="store_true", help="不生成 zip")
-    ap.add_argument("--zip", default="", help="zip 输出路径；macOS 默认附带 macos-<arch>，Windows 默认 dist/AI号池管理器.zip")
+    ap.add_argument("--no-zip", action="store_true", help="不生成压缩包（Linux 为 tar.gz）")
+    ap.add_argument("--zip", default="", help="压缩包输出路径；Linux 为 tar.gz，macOS/Windows 为 zip")
     args = ap.parse_args()
 
     if not SPEC.exists():
         raise SystemExit(f"找不到 {SPEC.name}")
 
-    if IS_MAC and not (ROOT / "vendor" / "cli-proxy-api").is_file():
+    if (IS_MAC or IS_LINUX) and not (ROOT / "vendor" / "cli-proxy-api").is_file():
         raise SystemExit("缺少 vendor/cli-proxy-api，请先运行 bash tools/fetch_cli_proxy_api.sh")
     trash = _retire_old_dist()
     _run_pyinstaller()
     if IS_MAC:
         _prepare_mac_bundle()
+    if IS_LINUX:
+        for filename in ("aipool-manager.desktop", "install-desktop.sh"):
+            shutil.copy2(ROOT / "packaging" / "linux" / filename, DIST / filename)
+        shutil.copy2(ROOT / "web" / "logo.png", DIST / "aipool-manager.png")
+        (DIST / "install-desktop.sh").chmod(0o755)
     _copy_docs()
     _copy_licenses()
-    if not IS_MAC:
+    if not IS_MAC and not IS_LINUX:
         _drop_build_exe()
     _drop_trash(trash)
 
     if not args.no_zip:
-        out = pathlib.Path(args.zip) if args.zip else DIST_ROOT / (f"{NAME}-macos-{platform.machine()}.zip" if IS_MAC else f"{NAME}.zip")
+        archive_name = (f"{NAME}-linux-gui-{platform.machine()}.tar.gz" if IS_LINUX
+                        else (f"{NAME}-macos-{platform.machine()}.zip" if IS_MAC else f"{NAME}.zip"))
+        out = pathlib.Path(args.zip) if args.zip else DIST_ROOT / archive_name
         _make_zip(out)
 
     log("完成")

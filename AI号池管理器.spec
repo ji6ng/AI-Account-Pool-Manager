@@ -11,6 +11,7 @@
 import sys
 
 IS_MAC = sys.platform == "darwin"
+IS_LINUX = sys.platform.startswith("linux")
 
 HIDDEN = [
     "uvicorn.logging",
@@ -32,7 +33,7 @@ HIDDEN = [
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=[("vendor/cli-proxy-api" if IS_MAC else "vendor/cli-proxy-api.exe", "vendor")],
+    binaries=[("vendor/cli-proxy-api" if IS_MAC or IS_LINUX else "vendor/cli-proxy-api.exe", "vendor")],
     datas=[
         ("web", "web"),
         ("vendor/modeltrace", "vendor/modeltrace"),
@@ -63,7 +64,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="app.icns" if IS_MAC else "app.ico",
+    icon=None if IS_LINUX else ("app.icns" if IS_MAC else "app.ico"),
 )
 
 coll = COLLECT(
