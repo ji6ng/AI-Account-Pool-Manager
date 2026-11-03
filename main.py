@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import os
-import pathlib
-import plistlib
 import shutil
 import signal
 import socket
@@ -16,7 +15,7 @@ import traceback
 import webbrowser
 from typing import Optional
 
-from core import accounts, keys, paths, ports, proxycfg, settings
+from core import accounts, autostart, keys, paths, ports, proxycfg, settings
 from core.pool import pool
 
 UI_TITLE = paths.PRODUCT_NAME
@@ -25,16 +24,22 @@ UI_TITLE = paths.PRODUCT_NAME
 # ---------------------------------------------------------------- 小工具
 
 def _log(msg: str) -> None:
+    line = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
+    if sys.platform.startswith("linux"):
+        print(line, flush=True)
     try:
         p = paths.logs_dir() / "app.log"
         with open(p, "a", encoding="utf-8") as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+            f.write(line + "\n")
     except Exception:
         pass
 
 
 def _alert(msg: str) -> None:
     """无控制台时也能让用户看到提示。"""
+    if sys.platform.startswith("linux"):
+        print(msg, file=sys.stderr, flush=True)
+        return
     try:
         if os.name == "nt":
             import ctypes
@@ -195,40 +200,7 @@ def _seed_accounts() -> None:
 
 
 def _apply_autostart(enabled: bool) -> None:
-    if sys.platform == "darwin":
-        try:
-            agent = pathlib.Path.home() / "Library" / "LaunchAgents" / "com.aipool.manager.plist"
-            if not enabled:
-                agent.unlink(missing_ok=True)
-            elif paths.is_frozen():
-                agent.parent.mkdir(parents=True, exist_ok=True)
-                payload = {"Label": "com.aipool.manager",
-                           "ProgramArguments": [sys.executable], "RunAtLoad": True}
-                temporary = agent.with_suffix(".plist.tmp")
-                temporary.write_bytes(plistlib.dumps(payload))
-                temporary.replace(agent)
-        except Exception as e:
-            _log(f"设置开机自启失败：{e}")
-        return
-    if os.name != "nt":
-        return
-    try:
-        import winreg
-
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                             r"Software\Microsoft\Windows\CurrentVersion\Run", 0,
-                             winreg.KEY_SET_VALUE)
-        name = "AIPoolManager"
-        if enabled and paths.is_frozen():
-            winreg.SetValueEx(key, name, 0, winreg.REG_SZ, f'"{sys.executable}"')
-        else:
-            try:
-                winreg.DeleteValue(key, name)
-            except FileNotFoundError:
-                pass
-        winreg.CloseKey(key)
-    except Exception as e:
-        _log(f"设置开机自启失败：{e}")
+    autostart.apply(enabled, log=_log)
 
 
 def _prepare_ports() -> None:
@@ -273,12 +245,34 @@ def _boot_pool_async(stopping: threading.Event) -> threading.Thread:
 
 # ---------------------------------------------------------------- 主流程
 
+def _print_server_banner(cfg: dict) -> None:
+    from core import netinfo
+
+    port = int(cfg["ui_port"])
+    host = cfg.get("listen_host") or "0.0.0.0"
+    print(f"\n{UI_TITLE} Linux 服务器版\n本机 URL：http://127.0.0.1:{port}/\n"
+          f"监听地址：{host}:{port}\n数据目录：{paths.data_dir()}\n号池端口：{cfg['pool_port']}", flush=True)
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        try:
+            for address in netinfo.local_ips():
+                if host in ("0.0.0.0", "::", address):
+                    print(f"LAN URL：http://{address}:{port}/", flush=True)
+        except Exception as exc:
+            _log(f"无法获取 LAN 地址：{exc}")
+    if not (cfg.get("admin_password") or "").strip():
+        print("未设置管理密码：只能从本机访问管理页面；远程管理请先设置密码或使用 ssh -L 8320:127.0.0.1:8320 隧道", flush=True)
+        if port != 8320:
+            print(f"当前端口隧道：ssh -L {port}:127.0.0.1:{port} <user>@<server>", flush=True)
+
+
 def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(description=UI_TITLE)
     ap.add_argument("--no-browser", action="store_true", help="启动后不自动打开浏览器")
     ap.add_argument("--port", type=int, default=0, help="临时指定界面端口")
     ap.add_argument("--data-dir", default="", help="指定数据目录（排查问题用）")
     ap.add_argument("--console", action="store_true", help="保留控制台输出")
+    ap.add_argument("--host", default="", help="仅本次运行覆盖监听地址")
+    ap.add_argument("--set-password", action="store_true", help="设置管理密码后退出（可读取 AIPOOL_ADMIN_PASSWORD）")
     args = ap.parse_args(argv)
 
     if args.data_dir:
@@ -288,6 +282,19 @@ def main(argv: Optional[list] = None) -> int:
     _log(f"启动 {UI_TITLE}｜frozen={paths.is_frozen()}｜data={paths.data_dir()}")
 
     _seed_settings()
+    if args.set_password:
+        password = os.environ.get("AIPOOL_ADMIN_PASSWORD")
+        if password is None:
+            password = getpass.getpass("管理密码：")
+        password = password.strip()
+        if not password:
+            print("管理密码不能为空，未修改设置。", file=sys.stderr)
+            return 1
+        settings.save({"admin_password": password})
+        print("管理密码已保存；若程序正在运行，请重启以应用。", flush=True)
+        return 0
+    if args.host:
+        settings.set_listen_host_override(args.host)
     cfg = settings.load()
     if args.port:
         settings.save({"ui_port": int(args.port)})
@@ -299,7 +306,7 @@ def main(argv: Optional[list] = None) -> int:
         url = _wait_existing()
         if url:
             _log(f"已有实例在运行（pid {holder}），打开 {url}")
-            if not args.no_browser:
+            if not args.no_browser and not sys.platform.startswith("linux"):
                 webbrowser.open(url)
             return 0
         # 进程在、界面不通：这时候要是在同一个数据目录再起一个号池，
@@ -309,6 +316,9 @@ def main(argv: Optional[list] = None) -> int:
             f"检测到程序已在运行（进程号 {holder}），但管理界面没有响应。\n\n"
             f"请打开{monitor}，结束进程号 {holder}，然后重新打开本程序。"
         )
+        if sys.platform.startswith("linux"):
+            msg = (f"检测到程序已在运行（进程号 {holder}），但管理界面没有响应。\n\n"
+                   f"请执行 kill {holder} 结束进程号 {holder}，然后重新启动本程序。")
         _log(msg.replace("\n", " "))
         _alert(msg)
         return 1
@@ -333,9 +343,11 @@ def main(argv: Optional[list] = None) -> int:
 
     port = int(cfg["ui_port"])
     url = f"http://127.0.0.1:{port}/"
+    if sys.platform.startswith("linux"):
+        _print_server_banner(cfg)
 
     def _open_later():
-        if args.no_browser:
+        if args.no_browser or sys.platform.startswith("linux"):
             return
         for _ in range(80):
             if not ports.is_free(port):

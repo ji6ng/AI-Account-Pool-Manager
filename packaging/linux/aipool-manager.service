@@ -1,0 +1,16 @@
+[Unit]
+Description=AI Pool Manager (headless)
+After=network.target
+
+[Service]
+Type=simple
+User=aipool
+WorkingDirectory=/opt/aipool/AI号池管理器-linux
+ExecStart="/opt/aipool/AI号池管理器-linux/AI号池管理器/AI号池管理器" --no-browser --data-dir /var/lib/aipool --host 127.0.0.1
+Restart=on-failure
+KillSignal=SIGTERM
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

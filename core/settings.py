@@ -12,6 +12,7 @@ from . import paths
 
 _lock = threading.RLock()
 _cache: Dict[str, Any] | None = None
+_listen_host_override = ""
 
 SETTINGS_FILE = "settings.json"
 
@@ -188,7 +189,7 @@ def load() -> Dict[str, Any]:
     global _cache
     with _lock:
         if _cache is not None:
-            return _cache
+            return {**_cache, "listen_host": _listen_host_override} if _listen_host_override else _cache
 
         raw: Dict[str, Any] = {}
         p = path()
@@ -218,7 +219,13 @@ def load() -> Dict[str, Any]:
         _cache = data
         if changed:
             _write(data)
-        return data
+        return {**data, "listen_host": _listen_host_override} if _listen_host_override else data
+
+
+def set_listen_host_override(host: str) -> None:
+    global _listen_host_override
+    with _lock:
+        _listen_host_override = host
 
 
 def _write(data: Dict[str, Any]) -> None:
@@ -232,14 +239,17 @@ def save(patch: Dict[str, Any], replace: bool = False) -> Dict[str, Any]:
     """合并保存；replace=True 时整份覆盖（用于导入）。"""
     global _cache
     with _lock:
-        cur = load()
+        load()
+        cur = _cache
         new = copy.deepcopy(patch) if replace else _merge(cur, patch)
+        if _listen_host_override:
+            new["listen_host"] = cur.get("listen_host", DEFAULTS["listen_host"])
         new.pop(_LEGACY_PROVIDER, None)
         if not new.get("internal_key"):
             new["internal_key"] = cur.get("internal_key") or ("sk-" + secrets.token_urlsafe(30))
         _cache = new
         _write(new)
-        return new
+        return load()
 
 
 def mark_first_run_done() -> None:

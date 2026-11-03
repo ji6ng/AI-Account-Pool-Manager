@@ -70,6 +70,22 @@ xattr -dr com.apple.quarantine "/Applications/AI号池管理器.app"
 
 打包应用的数据位于 `~/Library/Application Support/AIPool`，升级前备份此目录；开发运行仍使用仓库 `data/`，也可用 `--data-dir` 指定目录。应用在后台运行，没有 Dock 图标；再次打开应用只会打开已有的管理页面。关闭浏览器后服务继续运行，退出请用「设置 → 退出程序」。更多说明见 [macOS说明](docs/macOS说明.md)。
 
+## Linux 服务器版
+
+Linux 无桌面服务器/VPS 使用 `AI号池管理器-linux-server-<arch>.tar.gz`，解压后运行：
+
+```bash
+cd AI号池管理器-linux
+./AI号池管理器/AI号池管理器 --set-password
+./AI号池管理器/AI号池管理器 --no-browser --host 127.0.0.1
+# 本地电脑上建立隧道后浏览 http://127.0.0.1:8320/
+ssh -N -L 8320:127.0.0.1:8320 user@server
+```
+
+Linux 从不自动打开浏览器/对话框，启动地址和日志输出到终端。远程直接管理必须先设置管理密码，且需监听可访问地址；未设密码仅允许本机管理。`--set-password` 支持隐藏输入或 `AIPOOL_ADMIN_PASSWORD`，`--host` 仅本次生效，`--data-dir` 指定数据目录。支持 systemd 用户服务自启，开机免登录需管理员设置 `loginctl enable-linger <user>`；系统服务模板随包提供。
+
+在 Linux 上运行 `bash tools/fetch_cli_proxy_api.sh` 后，`python build.py` 生成 `dist/AI号池管理器-linux/` 和 tar.gz。发布包要求 glibc ≥ 构建机器版本，不支持直接在 musl/Alpine 上运行。详细安装、数据/日志、代理、systemd 和安全说明见 [Linux服务器版说明](docs/Linux服务器版说明.md)。
+
 ## 使用限制与数据
 
 额度默认约每 30 秒检查，切回发生在后续新请求，已输出回答不会重放。首次启用账号专属路由或新增账号后需重新启动一次号池。当前账号专属路由与备用通道均拒绝 previous_response_id，客户端需发送完整历史或开启新会话。未知额度会保留优先账号，可能暂时阻止使用后备组。

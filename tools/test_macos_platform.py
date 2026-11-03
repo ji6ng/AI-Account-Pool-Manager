@@ -18,7 +18,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import main
-from core import accounts, clients, paths, ports
+from core import accounts, autostart, clients, paths, ports
 from core.pool import Pool
 
 
@@ -72,14 +72,14 @@ class PlatformTests(unittest.TestCase):
         agent = self.home / "Library/LaunchAgents/com.aipool.manager.plist"
         exe = str(self.home / "AI号池管理器.app/Contents/MacOS/AI号池管理器")
         with patch.object(sys, "platform", "darwin"), patch.object(sys, "executable", exe), patch.object(sys, "frozen", False, create=True):
-            main._apply_autostart(True)
+            autostart.apply(True)
             self.assertFalse(agent.exists())
             with patch.object(sys, "frozen", True):
-                main._apply_autostart(True)
+                autostart.apply(True)
                 self.assertEqual(plistlib.loads(agent.read_bytes()), {"Label": "com.aipool.manager", "ProgramArguments": [exe], "RunAtLoad": True})
-            main._apply_autostart(False)
+            autostart.apply(False)
             self.assertFalse(agent.exists())
-            main._apply_autostart(False)
+            autostart.apply(False)
 
     def test_alert_escaping_and_failure(self):
         with patch.object(sys, "platform", "darwin"), patch.object(main.subprocess, "Popen") as spawn:
