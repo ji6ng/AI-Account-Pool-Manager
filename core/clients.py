@@ -99,7 +99,7 @@ def _backup(p: pathlib.Path, cid: str) -> str:
 def _atomic_write(p: pathlib.Path, text: str) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_name(p.name + ".aipool.tmp")
-    tmp.write_text(text, encoding="utf-8")
+    tmp.write_text(text, encoding="utf-8", newline="")
     os.replace(tmp, p)
 
 
@@ -211,7 +211,14 @@ def detect(base_url: str) -> List[Dict[str, Any]]:
         if installed:
             try:
                 if spec["kind"] == "toml":
-                    tomllib.loads(p.read_text(encoding="utf-8"))
+                    obj = tomllib.loads(p.read_text(encoding="utf-8"))
+                    if "model_catalog_json" in obj:
+                        item["warning"] = (
+                            "配置里有其它工具设置的 model_catalog_json，会覆盖号池的模型目录，"
+                            "Codex 会缺少系统提示。点「写入并切换」会将其注释停用。"
+                        )
+                        if item["status"] == "ok":
+                            item["status"] = "conflict"
             except Exception as e:
                 item["status"] = "broken"
                 item["error"] = f"config.toml 解析失败：{e}"
@@ -220,6 +227,33 @@ def detect(base_url: str) -> List[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------- TOML 行级编辑
+
+def _disable_root_catalog(text: str) -> Tuple[str, List[str]]:
+    """只注释根级目录；用可解析前缀避开多行字符串中的伪表头和伪键。"""
+    obj = tomllib.loads(text)
+    if "model_catalog_json" not in obj:
+        return text, []
+    lines = text.splitlines(keepends=True)
+    pattern = re.compile(r'''^\s*(?:model_catalog_json|"model_catalog_json"|'model_catalog_json')\s*=''')
+    for index, line in enumerate(lines):
+        if not (line.lstrip().startswith("[") or pattern.match(line)):
+            continue
+        try:
+            tomllib.loads("".join(lines[:index]))
+        except tomllib.TOMLDecodeError:
+            continue
+        if line.lstrip().startswith("["):
+            break
+        for end in range(index + 1, len(lines) + 1):
+            try:
+                tomllib.loads("".join(lines[index:end]))
+            except tomllib.TOMLDecodeError:
+                continue
+            lines[index:end] = ["# [AI 号池已停用，原值保留] " + part
+                                for part in lines[index:end]]
+            return "".join(lines), ["model_catalog_json"]
+    raise ValueError("无法安全注释根级 model_catalog_json")
+
 
 _SECTION_RE = re.compile(r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$")
 
@@ -313,7 +347,7 @@ def apply(cid: str, base_url: str, model: str, key_id: int,
           catalog: Optional[List[str]] = None) -> Dict[str, Any]:
     """把某个客户端的配置改成本网关 + 指定 Key + 指定模型。
 
-    返回 {"ok": True, "path", "backup", "changed": [...]}；
+    返回 {"ok": True, "path", "backup", "changed": [...], "disabled": [...]}；
     失败时抛出 ValueError，已写的内容会回滚。
     """
     spec = _spec(cid)
@@ -345,10 +379,12 @@ def apply(cid: str, base_url: str, model: str, key_id: int,
     before = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
 
     changed: List[str] = []
+    disabled: List[str] = []
     try:
         if spec["kind"] == "json":
             text = _write_json(p, key, base, model, roles or {}, catalog or [])
         elif spec["kind"] == "toml":
+            disabled = ["model_catalog_json"] if "model_catalog_json" in _read_toml(p) else []
             text = _write_toml(p, key, base, model)
         else:
             text = _write_env(p, key, base, model)
@@ -367,7 +403,7 @@ def apply(cid: str, base_url: str, model: str, key_id: int,
             pass
         raise ValueError(f"{spec['label']} 写入失败，已还原：{e}") from e
 
-    return {"ok": True, "path": str(p), "backup": backup, "changed": changed,
+    return {"ok": True, "path": str(p), "backup": backup, "changed": changed, "disabled": disabled,
             "base_url": base if spec["kind"] != "json" else base,
             "model": model}
 
@@ -403,7 +439,10 @@ def _write_json(p: pathlib.Path, key: Dict[str, Any], base: str, model: str,
 
 
 def _write_toml(p: pathlib.Path, key: Dict[str, Any], base: str, model: str) -> str:
-    text = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
+    text = ""
+    if p.exists():
+        with p.open(encoding="utf-8", newline="") as source:
+            text = source.read()
     if not text.strip():
         text = ""
     effort = "high"
@@ -413,6 +452,7 @@ def _write_toml(p: pathlib.Path, key: Dict[str, Any], base: str, model: str) -> 
     except Exception:
         pass
 
+    text, _ = _disable_root_catalog(text)
     base_v1 = base if base.lower().endswith("/v1") else base + "/v1"
     table = f"model_providers.{CODEX_PROVIDER}"
     text = _toml_set(text, None, "model", _toml_lit(model))
