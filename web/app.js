@@ -1749,7 +1749,55 @@ async function loadSettings() {
   S.settingsDirty = false;
   await loadPlusFallback(true);
   await loadPlusPriority(true);
+  await loadActivationTasks();
 }
+
+function paintActivationTasks() {
+  const data = S.activationTasks;
+  if (!data) return;
+  const chosen = new Set($$('#activation-accounts input:checked').map(el => el.value));
+  $('#activation-accounts').innerHTML = (data.accounts || []).map(a => `<label class="activation-account"><input type="checkbox" value="${esc(a.file)}" ${chosen.has(a.file) ? 'checked' : ''}><span>${esc(a.email)}</span><small>${esc(a.pool.toUpperCase())}</small></label>`).join('') || '<span class="muted tiny">没有可用的 ChatGPT Plus / Pro 账号。</span>';
+  $('#activation-task-list').innerHTML = (data.tasks || []).map(t => {
+    const when = t.repeat_daily ? `每天 ${esc(t.time)}（本机时间）` : `一次性 · ${new Date(t.run_at * 1000).toLocaleString('zh-CN', {hour12:false})}`;
+    const status = t.status === 'running' ? '正在执行' : t.status === 'success' ? '上次成功' : t.status === 'failed' ? '上次有失败' : t.enabled ? '等待执行' : '已停用 / 完成';
+    const result = (t.last_results || []).map(r => `${r.ok ? '✓' : '✕'} ${r.email || r.file}${r.error ? '：' + r.error : ''}`).join('；');
+    return `<article class="activation-task" data-activation-task="${esc(t.id)}"><div class="activation-task-main"><strong>${esc(t.name)}</strong><span>${when} · ${status}</span><span class="muted tiny">${(t.accounts || []).length} 个账号 · ${esc(t.prompt)}</span>${result ? `<span class="${(t.last_results || []).every(r => r.ok) ? 'ok' : 'err'} tiny">${esc(result)}</span>` : ''}</div><div class="row gap8"><button class="btn tiny ghost" data-activation-run="${esc(t.id)}" ${t.status === 'running' ? 'disabled' : ''}>立即执行</button>${t.repeat_daily ? `<button class="btn tiny ghost" data-activation-toggle="${esc(t.id)}" data-enabled="${t.enabled ? '1' : '0'}">${t.enabled ? '停用' : '启用'}</button>` : ''}<button class="btn tiny danger-ghost" data-activation-delete="${esc(t.id)}" ${t.status === 'running' ? 'disabled' : ''}>删除</button></div></article>`;
+  }).join('') || '<p class="muted tiny">尚未添加定时激活任务。</p>';
+  $$('[data-activation-run]').forEach(btn => btn.onclick = async () => { btn.disabled = true; try { await api(`/api/activation-tasks/${encodeURIComponent(btn.dataset.activationRun)}/run`, {method:'POST'}); toast('已开始发送激活问题', 'ok'); await loadActivationTasks(); } catch(e) { toast(e.message, 'err'); btn.disabled = false; } });
+  $$('[data-activation-toggle]').forEach(btn => btn.onclick = async () => { try { await api(`/api/activation-tasks/${encodeURIComponent(btn.dataset.activationToggle)}`, {method:'PUT', body:{enabled:btn.dataset.enabled !== '1'}}); await loadActivationTasks(); } catch(e) { toast(e.message, 'err'); } });
+  $$('[data-activation-delete]').forEach(btn => btn.onclick = async () => { try { await api(`/api/activation-tasks/${encodeURIComponent(btn.dataset.activationDelete)}`, {method:'DELETE'}); await loadActivationTasks(); } catch(e) { toast(e.message, 'err'); } });
+}
+
+async function loadActivationTasks() {
+  try { S.activationTasks = await api('/api/activation-tasks'); paintActivationTasks(); }
+  catch (e) { $('#activation-task-list').innerHTML = `<p class="err tiny">定时任务读取失败：${esc(e.message)}</p>`; }
+}
+
+$('#activation-daily').onchange = () => {
+  $('#activation-daily-time-wrap').classList.toggle('hidden', !$('#activation-daily').checked);
+  $('#activation-once-time-wrap').classList.toggle('hidden', $('#activation-daily').checked);
+  if (!$('#activation-daily').checked && !$('#activation-once-time').value) {
+    const d = new Date(Date.now() + 5 * 60 * 1000); d.setSeconds(0, 0);
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    $('#activation-once-time').value = local.toISOString().slice(0, 16);
+  }
+};
+$('#btn-activation-refresh').onclick = loadActivationTasks;
+$('#btn-activation-create').onclick = async () => {
+  const selected = $$('#activation-accounts input:checked').map(el => el.value);
+  if (!selected.length) { toast('请至少选择一个 Plus / Pro 账号', 'err'); return; }
+  const repeat = $('#activation-daily').checked;
+  const body = {name:$('#activation-name').value.trim(), prompt:$('#activation-prompt').value.trim(), accounts:selected, repeat_daily:repeat};
+  if (repeat) body.time = $('#activation-daily-time').value;
+  else body.run_at = $('#activation-once-time').value;
+  const btn = $('#btn-activation-create'); btn.disabled = true;
+  try { await api('/api/activation-tasks', {method:'POST', body}); $('#activation-name').value=''; toast('定时激活任务已添加', 'ok'); await loadActivationTasks(); }
+  catch(e) { toast(e.message, 'err'); }
+  finally { btn.disabled = false; }
+};
+setInterval(() => {
+  if (!$('#page-settings').classList.contains('hidden')) loadActivationTasks();
+}, 15000);
 
 function paintPlusPriority() {
   const data = S.plusPriority;

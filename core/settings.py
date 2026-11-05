@@ -38,6 +38,8 @@ DEFAULTS: Dict[str, Any] = {
     "plus_fallback": {"enabled": False, "check_interval": 30, "models": {}},
     "plus_account_order": [],
     "plus_priority": {"enabled": True, "groups": {}},
+    # 按本机时间定时向指定 Codex 账号发送简短请求，激活其用量窗口。
+    "activation_tasks": [],
     # ---- 模型池：alias 是客户端看到的模型名，name 是上游真实模型名
     "pools": {
         "plus": {

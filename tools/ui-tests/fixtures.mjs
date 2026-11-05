@@ -28,5 +28,6 @@ export function fixtures() {
   const models = Object.values(settings.pools).flatMap(p => p.models.map(m => m.alias));
   const usage = Object.fromEntries(accounts.map((a, i) => [a.file, { ok: true, provider: a.provider, primary: { label: '5 小时', left: 86 - i * 16, reset_after: 6400, used: 14 + i * 16 }, secondary: { label: '每周', left: 64 - i * 11, reset_after: 188000, used: 36 + i * 11 }, reset: { available: 0 } }]));
   const targets = { accounts: [...accounts, { ...accounts[0], file: 'disabled.json', email: 'disabled@example.com', disabled: true }], models: models.map(alias => ({ alias, key: 'p:' + alias, upstream: alias, in_bank: true })), provider_models: providers.flatMap(p => p.models.map(m => ({ key: 'r:' + p.id + '|' + m.name, upstream: m.name, exposed: p.prefix + '/' + m.alias, provider_label: p.label, ready: true, enabled: true, in_bank: false }))).concat([{ key: 'r:disabled|test', upstream: 'unavailable', exposed: 'disabled/test', provider_label: '未配置', ready: false }]) };
-  return { settings, accounts, providers, keys, overview, models, usage, targets };
+  const activationTasks = { tasks: [], accounts: accounts.filter(a => ['plus', 'pro'].includes(a.pool) && !a.disabled) };
+  return { settings, accounts, providers, keys, overview, models, usage, targets, activationTasks };
 }

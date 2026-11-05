@@ -24,7 +24,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import (__version__, accounts, autostart, clients, codex, codexcat, gemini, gemini_direct, keys,
+from . import (__version__, activation, accounts, autostart, clients, codex, codexcat, gemini, gemini_direct, keys,
                modeltrace, netinfo, paths, plus_fallback, plus_priority, poolapi, providers, proxycfg, settings)
 from .pool import pool
 
@@ -97,14 +97,21 @@ async def _restart_saved(result: Dict[str, Any]) -> Dict[str, Any]:
 def create_app() -> FastAPI:
     app = FastAPI(title=paths.PRODUCT_NAME, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.plus_fallback = plus_fallback.Monitor()
+    app.state.activation_scheduler = activation.Scheduler()
 
     @app.on_event("startup")
     async def _boot() -> None:
         keys.init()
         app.state.fallback_task = asyncio.create_task(app.state.plus_fallback.run())
+        app.state.activation_task = asyncio.create_task(app.state.activation_scheduler.run())
 
     @app.on_event("shutdown")
     async def _stop_fallback() -> None:
+        activation_task = getattr(app.state, "activation_task", None)
+        if activation_task:
+            activation_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await activation_task
         task = getattr(app.state, "fallback_task", None)
         if task:
             task.cancel()
@@ -481,6 +488,53 @@ def create_app() -> FastAPI:
     async def api_get_settings(request: Request):
         require_admin(request)
         return settings.load()
+
+    @app.get("/api/activation-tasks")
+    async def api_activation_tasks(request: Request):
+        require_admin(request)
+        return app.state.activation_scheduler.snapshot()
+
+    @app.post("/api/activation-tasks")
+    async def api_activation_task_create(request: Request):
+        require_admin(request)
+        try:
+            task = app.state.activation_scheduler.create(await request.json())
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        return {"ok": True, "task": task}
+
+    @app.put("/api/activation-tasks/{task_id}")
+    async def api_activation_task_update(task_id: str, request: Request):
+        require_admin(request)
+        body = await request.json()
+        if not isinstance(body, dict) or not isinstance(body.get("enabled"), bool):
+            raise HTTPException(status_code=400, detail="启用状态必须是布尔值")
+        try:
+            return app.state.activation_scheduler.set_enabled(task_id, body["enabled"])
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail="定时任务不存在") from e
+        except RuntimeError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
+
+    @app.delete("/api/activation-tasks/{task_id}")
+    async def api_activation_task_delete(task_id: str, request: Request):
+        require_admin(request)
+        try:
+            return app.state.activation_scheduler.delete(task_id)
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail="定时任务不存在") from e
+        except RuntimeError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
+
+    @app.post("/api/activation-tasks/{task_id}/run")
+    async def api_activation_task_run(task_id: str, request: Request):
+        require_admin(request)
+        try:
+            return app.state.activation_scheduler.run_now(task_id)
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail="定时任务不存在") from e
+        except RuntimeError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
 
     @app.get("/api/plus-fallback")
     async def api_plus_fallback(request: Request, refresh: int = 0):
@@ -1391,20 +1445,25 @@ async def _forward(path: str, request: Request):
     try:
         req = http().build_request(request.method, url, headers=headers, content=raw)
         up = await http().send(req, stream=True)
-        # 只对尚未向客户端输出的明确 429 再查一次额度。其它错误不触发付费切换。
-        if (up.status_code == 429 and not plus_priority.enabled(cfg)
+        # 仅在生成内容尚未输出、上游明确返回 429 时强制刷新额度，并最多
+        # 重试一次到新账号/显式备用通道。普通网络错误与 5xx 仍不切号。
+        if (up.status_code == 429
                 and model in {m["id"] for m in plus_fallback.sources(cfg)}):
-            before_model = model
+            before_route = (model, wire_model, selected_account)
             blocked = await apply_plus_route(force=True)
             if blocked is not None:
                 await up.aclose()
                 return blocked
-            if model != before_model:
+            after_route = (model, wire_model, selected_account)
+            if after_route != before_route:
                 await up.aclose()
                 req = http().build_request(request.method, url, headers=headers, content=raw)
                 up = await http().send(req, stream=True)
-        elif up.status_code == 429 and selected_account:
-            # 本次失败直接返回，下一请求刷新额度后才可能更换账号。
+            else:
+                # 429 也可能是瞬时频率限制；保留原错误，后台尽快再次检查。
+                request.app.state.plus_fallback.at = 0.0
+                request.app.state.plus_fallback.wake.set()
+        if up.status_code == 429 and selected_account:
             request.app.state.plus_fallback.at = 0.0
             request.app.state.plus_fallback.wake.set()
     except Exception as e:

@@ -7,9 +7,9 @@
 <link rel="icon" href="/assets/logo.png">
 <meta name="color-scheme" content="light dark">
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('aipool-theme')||'light'}catch(e){}</script>
-<link rel="stylesheet" href="/assets/style.css?v=1.2.18">
-<link rel="stylesheet" href="/assets/design.css?v=1.2.18">
-<link rel="stylesheet" href="/assets/refinements.css?v=1.2.18">
+<link rel="stylesheet" href="/assets/style.css?v=1.2.19">
+<link rel="stylesheet" href="/assets/design.css?v=1.2.19">
+<link rel="stylesheet" href="/assets/refinements.css?v=1.2.19">
 </head>
 <body>
 
@@ -431,6 +431,26 @@
         <button class="btn primary" id="btn-plus-priority-save" type="button">保存账号顺序</button>
       </div>
 
+      <div class="card mt16" id="activation-card">
+        <div class="card-head">
+          <div><h2>定时激活账号额度</h2><p class="muted tiny">按计划向选中的 Plus / Pro 账号发送一次简短问题，可提前激活 5 小时或周额度窗口。</p></div>
+          <button class="btn tiny" id="btn-activation-refresh" type="button">刷新</button>
+        </div>
+        <div class="activation-form">
+          <div class="field"><label for="activation-name">任务名称</label><input id="activation-name" maxlength="60" placeholder="例如：早上激活 Plus 额度"></div>
+          <div class="field"><label for="activation-prompt">发送的问题</label><input id="activation-prompt" maxlength="500" value="请只回复：已激活。"></div>
+          <div class="activation-schedule">
+            <label class="switchline"><input type="checkbox" id="activation-daily" checked><span>每天重复</span></label>
+            <label class="field" id="activation-daily-time-wrap"><span>每天执行时间（本机时间）</span><input type="time" id="activation-daily-time" value="09:00"></label>
+            <label class="field hidden" id="activation-once-time-wrap"><span>执行一次</span><input type="datetime-local" id="activation-once-time"></label>
+          </div>
+          <div class="field"><label>选择账号</label><div id="activation-accounts" class="activation-accounts"><span class="muted tiny">正在读取账号…</span></div></div>
+          <button class="btn primary" id="btn-activation-create" type="button">添加定时任务</button>
+        </div>
+        <p class="muted tiny">每次激活都会向上游发送真实请求并消耗少量额度。任务保存在本机，仅在管理器运行时执行；停机期间错过的每日任务会在当天重新启动后补跑一次。</p>
+        <div id="activation-task-list" class="activation-task-list"></div>
+      </div>
+
       <div class="sticky-save">
         <button class="btn primary" id="btn-save-settings">保存设置</button>
         <span class="muted tiny" id="save-hint"></span>
@@ -573,6 +593,6 @@
 </div></div>
 
 <div id="dlg-confirm" class="mask hidden"><div class="dialog small"><div class="confirm-mark" data-icon="alert"></div><h3 id="confirm-title">确认操作</h3><p id="confirm-message" class="muted"></p><div class="dialog-actions"><button class="btn" id="btn-confirm-cancel">取消</button><button class="btn primary" id="btn-confirm-ok">确认</button></div></div></div>
-<script src="/assets/app.js?v=1.2.18"></script>
+<script src="/assets/app.js?v=1.2.19"></script>
 </body>
 </html>
