@@ -84,7 +84,7 @@ if IS_MAC:
         icon="app.icns",
         bundle_identifier="com.aipool.manager",
         info_plist={
-            "CFBundleShortVersionString": "1.2.18",
+            "CFBundleShortVersionString": "1.2.19",
             "LSUIElement": True,
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",

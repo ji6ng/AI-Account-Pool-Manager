@@ -121,6 +121,13 @@ sudo systemctl stop aipool-manager.service
 
 不要同时启用用户服务和系统服务。无需以 root 运行程序；系统服务安装步骤才需要管理员权限。
 
+### 定时激活与时区
+
+「系统设置 → 定时激活账号额度」按服务器本地时间执行。很多 VPS 默认是 UTC，北京时间 9:00
+相当于 UTC 1:00。可先执行 `date` 或 `timedatectl` 查看时区；若想按北京时间设置，管理员可
+执行 `sudo timedatectl set-timezone Asia/Shanghai`，或在 systemd 服务中加入
+`Environment=TZ=Asia/Shanghai` 后重启服务。任务仅在管理器运行时执行。
+
 ### 数据、日志、代理与兼容性
 
 - 打包 Linux 默认使用可执行文件所在目录的 `data/`；不可写时回退到 `${XDG_DATA_HOME:-~/.local/share}/AIPool`。`--data-dir` 优先。备份整个数据目录，升级时保留它，勿上传账号凭据、Key 或设置文件。

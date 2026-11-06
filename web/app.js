@@ -2,7 +2,7 @@
 (() => {
 if (!document.getElementById('dlg-key-connect') || !document.getElementById('plus-fallback-card')) {
   const target = new URL(location.href);
-  target.searchParams.set('ui', '1.2.18'); target.searchParams.set('refresh', String(Date.now()));
+  target.searchParams.set('ui', '1.2.19'); target.searchParams.set('refresh', String(Date.now()));
   location.replace(target.toString());
   return;
 }
