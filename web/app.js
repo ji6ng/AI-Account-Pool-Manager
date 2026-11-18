@@ -1634,6 +1634,7 @@ function clientCardHtml(c) {
     <div class="field"><label>默认模型</label><select data-cl-model="${c.id}" ${catalog.length ? '' : 'disabled'}>${modelOptions || '<option value="">这把 Key 没有可用模型</option>'}</select></div>
     ${roleBox}
     <button class="btn primary client-apply" data-cl-apply="${c.id}" ${catalog.length ? '' : 'disabled'}>${c.installed ? '写入并切换' : '创建配置'}</button>
+    ${c.id === 'codex' ? '<button class="btn danger-ghost" data-cl-disconnect="codex">退出号池，恢复官方登录</button>' : ''}
   </div>`;
 }
 
@@ -1641,6 +1642,18 @@ function renderClients() {
   const meta = S.clientMeta;
   if (!meta) return;
   $('#client-list').innerHTML = meta.clients.map(clientCardHtml).join('');
+  $$('[data-cl-disconnect]').forEach(btn => {
+    btn.onclick = async () => {
+      if (!await confirmAction('将恢复 Codex 官方配置，不删除登录凭据。请关闭当前 Codex，在终端执行 codex login 登录自己的账号，再重新启动。', '退出号池', '退出号池')) return;
+      await withBusy(btn, async () => {
+        const res = await api('/api/clients/codex/disconnect', { method: 'POST' });
+        S.clientMeta.clients = res.clients;
+        delete S.clientDraft.codex;
+        renderClients();
+        toast('已恢复官方配置，请重启 Codex；未登录时执行 codex login。', 'ok');
+      });
+    };
+  });
   $$('[data-cl-key]').forEach(sel => {
     sel.onchange = () => {
       const cid = sel.dataset.clKey, d = S.clientDraft[cid], c = meta.clients.find(x => x.id === cid);
@@ -1961,10 +1974,10 @@ $('#btn-open-folder').onclick = async () => {
   });
 };
 $('#btn-quit').onclick = async () => {
-  if (!await confirmAction('退出后客户端将无法使用，需要重新双击程序启动。', '退出程序', '退出程序')) return;
+  if (!await confirmAction('退出前会将使用号池的 Codex 恢复为官方配置。请重启 Codex，未登录时执行 codex login 登录自己的账号。其它代理客户端将无法使用，需要重新启动程序。', '退出程序', '退出程序')) return;
   await withBusy($('#btn-quit'), async () => {
     await api('/api/system/quit', { method: 'POST' });
-    document.body.innerHTML = '<div style="padding:60px;text-align:center;font:16px sans-serif;color:#6b7280">程序已退出，可以关闭这个页面。</div>';
+    document.body.innerHTML = '<div style="padding:60px;text-align:center;font:16px sans-serif;color:#6b7280">程序已退出，Codex 已退出号池。请重启 Codex；未登录时在终端执行 codex login 登录自己的账号。可以关闭这个页面。</div>';
   });
 };
 

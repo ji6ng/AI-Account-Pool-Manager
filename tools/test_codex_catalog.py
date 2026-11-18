@@ -41,6 +41,34 @@ class CatalogTests(unittest.TestCase):
     def apply(self):
         return clients.apply("codex", self.base, "plus-gpt-6.1-sol", 1)
 
+    def test_disconnect_restores_official(self):
+        self.config.write_text('[projects."/work"]\ntrust_level = "trusted"\n')
+        auth = self.config.with_name("auth.json")
+        auth.write_text('{"token": "personal"}')
+        self.apply()
+        before = self.config.read_bytes()
+        result = clients.disconnect_codex()
+        restored = tomllib.loads(self.config.read_text())
+        self.assertEqual(restored["model_provider"], "openai")
+        self.assertNotIn("model", restored)
+        self.assertEqual(restored["projects"]["/work"]["trust_level"], "trusted")
+        self.assertEqual(auth.read_text(), '{"token": "personal"}')
+        self.assertEqual(Path(result["backup"]).read_bytes(), before)
+        self.assertEqual(clients._current(clients._spec("codex"))["base_url"], "")
+        self.assertFalse(clients.disconnect_codex()["changed"])
+
+    def test_disconnect_leaves_other_provider_untouched(self):
+        original = 'model_provider = "other"\nmodel = "custom"\n'
+        self.config.write_text(original)
+        self.assertFalse(clients.disconnect_codex()["changed"])
+        self.assertEqual(self.config.read_text(), original)
+
+    def test_disconnect_rejects_invalid_config(self):
+        self.config.write_text('model_provider = [')
+        with self.assertRaises(ValueError):
+            clients.disconnect_codex()
+        self.assertEqual(self.config.read_text(), 'model_provider = [')
+
     def detect(self):
         return next(item for item in clients.detect(self.base) if item["id"] == "codex")
 
@@ -101,7 +129,7 @@ class CatalogTests(unittest.TestCase):
                 self.assertTrue(parsed["other"]["keep"])
 
     def test_warning_coexists_with_drift_and_parse_error_wins(self):
-        self.config.write_text('model_catalog_json = "foreign"\n[model_providers.cliproxy]\nbase_url = "http://old/v1"\n')
+        self.config.write_text('model_provider = "cliproxy"\nmodel_catalog_json = "foreign"\n[model_providers.cliproxy]\nbase_url = "http://old/v1"\n')
         self.assertEqual(self.detect()["status"], "drift")
         self.assertIn("warning", self.detect())
         self.config.write_text('model_catalog_json = "unterminated\n')

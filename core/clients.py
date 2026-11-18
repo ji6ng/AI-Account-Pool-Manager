@@ -154,7 +154,7 @@ def _current(spec: Dict[str, Any]) -> Dict[str, Any]:
             roles = {role: str(env.get(field) or "") for role, field in CLAUDE_ROLES}
         elif spec["kind"] == "toml":
             obj = _read_toml(p)
-            prov = (obj.get("model_providers") or {}).get(CODEX_PROVIDER) or {}
+            prov = ((obj.get("model_providers") or {}).get(CODEX_PROVIDER) or {}) if obj.get("model_provider") == CODEX_PROVIDER else {}
             base = str(prov.get("base_url") or "")
             model = str(obj.get("model") or "")
             token = str(prov.get("experimental_bearer_token") or "")
@@ -228,13 +228,13 @@ def detect(base_url: str) -> List[Dict[str, Any]]:
 
 # ---------------------------------------------------------------- TOML 行级编辑
 
-def _disable_root_catalog(text: str) -> Tuple[str, List[str]]:
+def _disable_root_catalog(text: str, key: str = "model_catalog_json") -> Tuple[str, List[str]]:
     """只注释根级目录；用可解析前缀避开多行字符串中的伪表头和伪键。"""
     obj = tomllib.loads(text)
-    if "model_catalog_json" not in obj:
+    if key not in obj:
         return text, []
     lines = text.splitlines(keepends=True)
-    pattern = re.compile(r'''^\s*(?:model_catalog_json|"model_catalog_json"|'model_catalog_json')\s*=''')
+    pattern = re.compile(rf'''^\s*(?:{re.escape(key)}|"{re.escape(key)}"|'{re.escape(key)}')\s*=''')
     for index, line in enumerate(lines):
         if not (line.lstrip().startswith("[") or pattern.match(line)):
             continue
@@ -251,8 +251,8 @@ def _disable_root_catalog(text: str) -> Tuple[str, List[str]]:
                 continue
             lines[index:end] = ["# [AI 号池已停用，原值保留] " + part
                                 for part in lines[index:end]]
-            return "".join(lines), ["model_catalog_json"]
-    raise ValueError("无法安全注释根级 model_catalog_json")
+            return "".join(lines), [key]
+    raise ValueError(f"无法安全注释根级 {key}")
 
 
 _SECTION_RE = re.compile(r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$")
@@ -310,6 +310,33 @@ def _toml_set(text: str, table: Optional[str], key: str, literal: str) -> str:
             return "".join(lines)
     lines.insert(end, new_line)
     return "".join(lines)
+
+
+def disconnect_codex() -> Dict[str, Any]:
+    p = _spec("codex")["path"]
+    if not p.exists():
+        return {"ok": True, "changed": False}
+    before = p.read_text(encoding="utf-8")
+    try:
+        obj = tomllib.loads(before)
+        if obj.get("model_provider") != CODEX_PROVIDER:
+            return {"ok": True, "changed": False}
+        text = before
+        for key in ("model_provider", "model", "model_catalog_json"):
+            text, _ = _disable_root_catalog(text, key)
+        text = _toml_set(text, None, "model_provider", _toml_lit("openai"))
+        tomllib.loads(text)
+        backup = _backup(p, "codex")
+        try:
+            _atomic_write(p, text)
+            if tomllib.loads(p.read_text(encoding="utf-8")).get("model_provider") != "openai":
+                raise ValueError("回读提供方不一致")
+        except Exception:
+            _atomic_write(p, before)
+            raise
+    except Exception as e:
+        raise ValueError(f"Codex 退出号池失败：{e}") from e
+    return {"ok": True, "changed": True, "backup": backup, "path": str(p)}
 
 
 def _toml_lit(value: Any) -> str:

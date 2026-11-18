@@ -687,6 +687,15 @@ def create_app() -> FastAPI:
         return {**res, "base": clients.gateway_base(cfg),
                 "clients": clients.detect(clients.gateway_base(cfg))}
 
+    @app.post("/api/clients/codex/disconnect")
+    async def api_codex_disconnect(request: Request):
+        require_admin(request)
+        try:
+            res = clients.disconnect_codex()
+        except ValueError as e:
+            return {"ok": False, "error": str(e)}
+        return {**res, "clients": clients.detect(clients.gateway_base())}
+
     # ------------------------------------------------------------ 日志
     @app.get("/api/logs")
     async def api_logs(request: Request, limit: int = 60):
@@ -723,6 +732,10 @@ def create_app() -> FastAPI:
     @app.post("/api/system/quit")
     async def api_quit(request: Request):
         require_admin(request)
+        try:
+            clients.disconnect_codex()
+        except ValueError as e:
+            return {"ok": False, "error": str(e)}
         pool.stop()
         threading_exit()
         return {"ok": True}
